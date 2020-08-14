@@ -21,7 +21,7 @@ impl Print {
 
     /// Print a prompt without a new line.
     pub fn prompt<S: AsRef<str>>(text: S) {
-        print!("{}", text.as_ref().blue());
+        print!("{}: ", text.as_ref().blue());
         stdout().flush().unwrap();
     }
 

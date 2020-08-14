@@ -73,6 +73,17 @@ impl Renamer {
         self.rename_source_subfolder()?;
         self.rename_project_root()?;
 
+        Print::header("Cleanup");
+        if let ProjectType::Code = self.proj_type {
+            if self.request_cleanup()? {
+                self.cleanup()?;
+            } else {
+                Print::basic("Cleanup skipped.");
+            }
+        } else {
+            Print::basic("Nothing to clean up for Blueprint project.");
+        }
+
         Print::header("Success");
         Print::basic("Project successfully renamed.");
         Print::newline();
@@ -82,7 +93,7 @@ impl Renamer {
 
     /// Request the project root directory from the user.
     fn request_project_root(&mut self) -> Result<(), Box<dyn Error>> {
-        Print::prompt("Project root: ");
+        Print::prompt("Project root");
 
         let mut root = String::new();
         match io::stdin().read_line(&mut root) {
@@ -135,7 +146,7 @@ impl Renamer {
 
     /// Request final project name from user.
     fn request_final_project_name(&mut self) -> Result<(), String> {
-        Print::prompt("Project final name: ");
+        Print::prompt("Project final name");
 
         let mut final_name = String::new();
         match io::stdin().read_line(&mut final_name) {
@@ -802,7 +813,7 @@ impl Renamer {
                             ) {
                                 Print::step(
                                     "Emplace",
-                                    &format!("Replacing api references in file: {:?}.", entry),
+                                    &format!("Replacing outdated _API references in file: {}.", entry.to_str().unwrap()),
                                 );
                                 fs::write(
                                     &entry,
@@ -860,14 +871,65 @@ impl Renamer {
         }
         Ok(())
     }
-    
     /// Rename the project root folder.
-    fn rename_project_root(&self) -> Result<(), Box<dyn Error>> {
+    fn rename_project_root(&mut self) -> Result<(), Box<dyn Error>> {
         Print::process("Renaming root folder");
         let original = &self.proj_root;
-        let _final = &self.proj_root.with_file_name(&self.proj_final_name);
+        let _final = self.proj_root.with_file_name(&self.proj_final_name);
         Print::step("Root folder rename", "Renaming");
-        fs::rename(original, _final)?;
+        fs::rename(&original, &_final)?;
+        self.proj_root = _final;
+
+        Ok(())
+    }
+
+    /// Request cleanup.
+    fn request_cleanup(&self) -> Result<bool, Box<dyn Error>> {
+        Print::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
+        Print::prompt("[Y]es/[N]o");
+
+        let mut buf = String::new();
+        io::stdin().read_line(&mut buf)?;
+        if let Some(c) = buf.chars().next() {
+            if c == 'y' || c == 'Y' {
+                return Ok(true);
+            } else {
+                return Ok(false);
+            }
+        } else {
+            Err("No input provided.")?
+        }
+
+        Ok(true)
+    }
+
+    /// Cleanup *Saved*, *Intermediate*, and *Binaries* directories.
+    fn cleanup(&self) -> Result<(), Box<dyn Error>> {
+        Print::process("Cleaning up outdated directories.");
+
+        Print::step("Cleanup", "Deleting Saved directory.");
+        let saved_dir = self.proj_root.join("Saved");
+        if saved_dir.is_dir() {
+            fs::remove_dir_all(saved_dir)?;
+        } else {
+            Print::step("Cleanup", "Does not exist. Skipped.");
+        }
+
+        Print::step("Cleanup", "Deleting Intermediate directory.");
+        let intermediate_dir = self.proj_root.join("Intermediate");
+        if intermediate_dir.is_dir() {
+            fs::remove_dir_all(intermediate_dir)?;
+        } else {
+            Print::step("Cleanup", "Does not exist. Skipped.");
+        }
+
+        Print::step("Cleanup", "Deleting Binaries directory.");
+        let binaries_dir = self.proj_root.join("Binaries");
+        if binaries_dir.is_dir() {
+            fs::remove_dir_all(binaries_dir)?;
+        } else {
+            Print::step("Cleanup", "Does not exist. Skipped.");
+        }
 
         Ok(())
     }
