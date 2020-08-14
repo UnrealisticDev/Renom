@@ -813,7 +813,10 @@ impl Renamer {
                             ) {
                                 Print::step(
                                     "Emplace",
-                                    &format!("Replacing outdated _API references in file: {}.", entry.to_str().unwrap()),
+                                    &format!(
+                                        "Replacing outdated _API references in file: {}.",
+                                        entry.to_str().unwrap()
+                                    ),
                                 );
                                 fs::write(
                                     &entry,
