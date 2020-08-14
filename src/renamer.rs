@@ -44,6 +44,7 @@ impl Renamer {
 
     /// Start the renaming process.
     pub fn start(&mut self) -> Result<(), Box<dyn Error>> {
+        Print::check_support_for_colors();
         Print::header("Welcome to Renom");
         Print::header("Project Details");
         Print::basic("Tell us a little about your project.");

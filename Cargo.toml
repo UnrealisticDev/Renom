@@ -16,3 +16,4 @@ rust-ini = "0.15"
 serde = {version = "*", features = ["derive"]}
 serde_json = "*"
 colored = "2"
+term = "*"

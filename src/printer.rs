@@ -4,11 +4,13 @@ use std::io::{stdout, Write};
 pub struct Print;
 
 impl Print {
-
     /// Toggles coloring based on environment.
     /// For instance, colors do not work for `cmd`on Windows.
     pub fn check_support_for_colors() {
-
+        let term = term::stdout().unwrap();
+        if !term.supports_color() {
+            colored::control::set_override(false);
+        }
     }
 
     /// Print a header. Includes a preliminary newline.
