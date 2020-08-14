@@ -3,7 +3,7 @@ use regex::Regex;
 use serde_json::Value;
 use std::error::Error;
 use std::fs::{self};
-use std::io::{self, Read};
+use std::io::{stdin, Read};
 use std::path::{Path, PathBuf};
 
 use crate::pathfinder::Pathfinder;
@@ -89,9 +89,6 @@ impl Renamer {
         Print::basic("Project successfully renamed.");
         Print::newline();
 
-        Print::prompt("Press Enter to exit.");
-        let _ = io::stdin().read(&mut [0u8])?;
-
         Ok(())
     }
 
@@ -100,7 +97,7 @@ impl Renamer {
         Print::prompt("Project root");
 
         let mut root = String::new();
-        match io::stdin().read_line(&mut root) {
+        match stdin().read_line(&mut root) {
             Ok(_) => {
                 root = root.replace("\r", "").replace("\n", "");
             }
@@ -153,7 +150,7 @@ impl Renamer {
         Print::prompt("Project final name");
 
         let mut final_name = String::new();
-        match io::stdin().read_line(&mut final_name) {
+        match stdin().read_line(&mut final_name) {
             Ok(_) => {
                 final_name = final_name.replace("\r", "").replace("\n", "");
             }
@@ -896,7 +893,7 @@ impl Renamer {
         Print::prompt("[Y]es/[N]o");
 
         let mut buf = String::new();
-        io::stdin().read_line(&mut buf)?;
+        stdin().read_line(&mut buf)?;
         if let Some(c) = buf.chars().next() {
             if c == 'y' || c == 'Y' {
                 return Ok(true);
