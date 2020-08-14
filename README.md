@@ -35,7 +35,7 @@ git clone https://github.com/UnrealisticDev/Renom.git
 2. Navigate into the repo
 
 ```shell
-cd ue4-renom
+cd Renom
 ```
 
 3. Build and run
