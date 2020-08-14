@@ -29,7 +29,7 @@ Once you have Rust installed...
 1. Clone the repo
 
 ```shell
-git clone https://github.com/UnrealisticDev/Renom/tree/v0.1.0
+git clone https://github.com/UnrealisticDev/Renom.git
 ```
 
 2. Navigate into the repo
