@@ -88,6 +88,9 @@ impl Renamer {
         Print::basic("Project successfully renamed.");
         Print::newline();
 
+        Print::prompt("Press Enter to exit.");
+        let _ = io::stdin().read(&mut [0u8])?;
+
         Ok(())
     }
 
