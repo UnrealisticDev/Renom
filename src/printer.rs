@@ -4,6 +4,13 @@ use std::io::{stdout, Write};
 pub struct Print;
 
 impl Print {
+
+    /// Toggles coloring based on environment.
+    /// For instance, colors do not work for `cmd`on Windows.
+    pub fn check_support_for_colors() {
+
+    }
+
     /// Print a header. Includes a preliminary newline.
     pub fn header<S: AsRef<str>>(text: S) {
         println!("\n[ {} ]", text.as_ref().green());
@@ -37,6 +44,6 @@ impl Print {
 
     /// Print an error.
     pub fn error<S: AsRef<str>>(text: S) {
-        println!("\n\t[ Error ]\n\t{}", text.as_ref().red());
+        println!("\n\t[ Error ]\n\t{}\n", text.as_ref().red());
     }
 }
