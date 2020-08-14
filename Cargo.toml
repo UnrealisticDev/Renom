@@ -1,8 +1,12 @@
 [package]
 authors = ["Mustafa <mustafa.moiz125@gmail.com>"]
 edition = "2018"
-name = "ue4-renom"
+name = "renom"
 version = "0.1.0"
+description = "A simple program to rename Unreal Engine 4 projects."
+license = "MIT"
+repository = "https://github.com/UnrealisticDev/Renom"
+documentation = "https://unrealistic.dev/articles/rename-your-project-including-code"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
