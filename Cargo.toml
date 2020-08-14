@@ -1,0 +1,14 @@
+[package]
+authors = ["Mustafa <mustafa.moiz125@gmail.com>"]
+edition = "2018"
+name = "ue4-renom"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+regex = "*"
+rust-ini = "0.15"
+serde = {version = "*", features = ["derive"]}
+serde_json = "*"
+colored = "2"
