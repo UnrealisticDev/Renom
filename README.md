@@ -43,3 +43,9 @@ cd Renom
 ```shell
 cargo run
 ```
+
+Alternatively, you can use the `install` subcommand, which will pull and build Renom directly from [crates.io](https://crates.io/crates/renom). If the build is successful, you should be able to find the installed executable at *C:/Users/{User}/.cargo/bin/renom.exe*.
+
+```shell
+cargo install renom
+```
