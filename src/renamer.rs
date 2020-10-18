@@ -394,7 +394,7 @@ impl Renamer {
                 }
             }
 
-            fs::write(&_final, v.to_string())?;
+            fs::write(&_final, serde_json::to_string_pretty(&v)?)?;
         }
 
         Ok(())
