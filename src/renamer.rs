@@ -7,7 +7,7 @@ use std::io::{stdin, Read};
 use std::path::{Path, PathBuf};
 
 use crate::pathfinder::Pathfinder;
-use crate::printer::Print;
+use crate::logger::Log;
 
 enum ProjectType {
     Blueprint,
@@ -44,22 +44,22 @@ impl Renamer {
 
     /// Start the renaming process.
     pub fn start(&mut self) -> Result<(), Box<dyn Error>> {
-        Print::check_support_for_colors();
-        Print::header("Welcome to Renom");
-        Print::header("Project Details");
-        Print::basic("Tell us a little about your project.");
+        Log::check_support_for_colors();
+        Log::header("Welcome to Renom");
+        Log::header("Project Details");
+        Log::basic("Tell us a little about your project.");
         self.request_project_root()?;
         self.infer_original_project_name()?;
         self.request_final_project_name()?;
         self.detect_project_type();
 
-        Print::header("Backup & Staging");
-        Print::basic("Setting up backup and staging directories.");
+        Log::header("Backup & Staging");
+        Log::basic("Setting up backup and staging directories.");
         self.backup_project_files()?;
         self.stage_project_files()?;
 
-        Print::header("Rename");
-        Print::basic("Renaming and updating project files.");
+        Log::header("Rename");
+        Log::basic("Renaming and updating project files.");
         self.update_project_descriptor()?;
         self.update_engine_config()?;
         if let ProjectType::Code = self.proj_type {
@@ -68,33 +68,33 @@ impl Renamer {
             self.update_module_source_files()?;
         }
 
-        Print::header("Apply");
-        Print::basic("So far, so good. Applying changes to live directory.");
+        Log::header("Apply");
+        Log::basic("So far, so good. Applying changes to live directory.");
         self.apply()?;
         self.rename_source_subfolder()?;
         self.rename_project_root()?;
 
-        Print::header("Cleanup");
+        Log::header("Cleanup");
         if let ProjectType::Code = self.proj_type {
             if self.request_cleanup()? {
                 self.cleanup()?;
             } else {
-                Print::basic("Cleanup skipped.");
+                Log::basic("Cleanup skipped.");
             }
         } else {
-            Print::basic("Nothing to clean up for Blueprint project.");
+            Log::basic("Nothing to clean up for Blueprint project.");
         }
 
-        Print::header("Success");
-        Print::basic("Project successfully renamed.");
-        Print::newline();
+        Log::header("Success");
+        Log::basic("Project successfully renamed.");
+        Log::newline();
 
         Ok(())
     }
 
     /// Request the project root directory from the user.
     fn request_project_root(&mut self) -> Result<(), Box<dyn Error>> {
-        Print::prompt("Project root");
+        Log::prompt("Project root");
 
         let mut root = String::new();
         match stdin().read_line(&mut root) {
@@ -135,7 +135,7 @@ impl Renamer {
 
         if let Some(path) = project_file {
             self.proj_original_name = path.file_stem().unwrap().to_str().unwrap().to_owned();
-            Print::basic(format!(
+            Log::basic(format!(
                 "Project original name: {}",
                 self.proj_original_name
             ));
@@ -147,7 +147,7 @@ impl Renamer {
 
     /// Request final project name from user.
     fn request_final_project_name(&mut self) -> Result<(), String> {
-        Print::prompt("Project final name");
+        Log::prompt("Project final name");
 
         let mut final_name = String::new();
         match stdin().read_line(&mut final_name) {
@@ -174,17 +174,17 @@ impl Renamer {
     /// *Source* directory.
     fn detect_project_type(&mut self) {
         if self.pathfinder.source_dir().is_dir() {
-            Print::basic("Code project detected.");
+            Log::basic("Code project detected.");
             self.proj_type = ProjectType::Code;
         } else {
-            Print::basic("Blueprint project detected.");
+            Log::basic("Blueprint project detected.");
             self.proj_type = ProjectType::Blueprint;
         }
     }
 
     /// Back up all relevant files.
     fn backup_project_files(&self) -> Result<(), Box<dyn Error>> {
-        Print::process(format!(
+        Log::process(format!(
             "Backing up files to {}",
             self.pathfinder
                 .backup_dir()
@@ -290,7 +290,7 @@ impl Renamer {
         description: &str,
         file: P,
     ) -> Result<(), Box<dyn Error>> {
-        Print::step("Backing up", description);
+        Log::step("Backing up", description);
 
         let file = file.as_ref();
 
@@ -317,7 +317,7 @@ impl Renamer {
     /// Stage all relevant files. These files will be worked on
     /// and, if all goes well, eventually copied to the live directory.
     fn stage_project_files(&self) -> Result<(), Box<dyn Error>> {
-        Print::process(format!(
+        Log::process(format!(
             "Staging files to {}.",
             self.pathfinder
                 .staging_dir()
@@ -337,7 +337,7 @@ impl Renamer {
         let backup_dir = &self.pathfinder.backup_dir();
         for entry in backup_dir.read_dir()? {
             let entry = entry.unwrap().path();
-            Print::step("Staging", entry.file_name().unwrap().to_str().unwrap());
+            Log::step("Staging", entry.file_name().unwrap().to_str().unwrap());
             fs::copy(
                 &entry,
                 &staging_dir.join(&entry.file_name().unwrap().to_str().unwrap()),
@@ -350,7 +350,7 @@ impl Renamer {
 
     /// Rename and update project descriptor (.uproject).
     fn update_project_descriptor(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Updating project descriptor.");
+        Log::process("Updating project descriptor.");
         let original = &self
             .pathfinder
             .staging_dir()
@@ -363,14 +363,14 @@ impl Renamer {
             .join(&self.proj_final_name)
             .with_extension("uproject");
 
-        Print::step(
+        Log::step(
             "Update project descriptor",
             &format!("Renaming descriptor to {}", self.proj_final_name),
         );
         fs::rename(&original, &_final)?;
 
         if let ProjectType::Code = self.proj_type {
-            Print::step(
+            Log::step(
                 "Update project descriptor",
                 "Replacing instances of old name with new name within descriptor.",
             );
@@ -402,16 +402,16 @@ impl Renamer {
 
     /// Update engine config file (DefaultEngine.ini).
     fn update_engine_config(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Updating engine config file.");
+        Log::process("Updating engine config file.");
 
         let config_path = &self.pathfinder.staging_dir().join("DefaultEngine.ini");
-        Print::step(
+        Log::step(
             "Update engine config",
             &format!("Opening config file at {:?}", config_path),
         );
         let mut config = Ini::load_from_file(&config_path)?;
 
-        Print::step(
+        Log::step(
             "Update engine config",
             "Adding GameName entry under [URL] header to DefaultEngine.ini.",
         );
@@ -420,7 +420,7 @@ impl Renamer {
             .set("GameName", &self.proj_final_name);
 
         if let ProjectType::Code = self.proj_type {
-            Print::step(
+            Log::step(
                 "Update engine config",
                 "Adding ActiveGameNameRedirect entry(s) under [/Script/Engine.Engine] header to DefaultEngine.ini."
             );
@@ -469,7 +469,7 @@ impl Renamer {
                 .remove("Dummy");
         }
 
-        Print::step("Update engine config", "Writing to file.");
+        Log::step("Update engine config", "Writing to file.");
         config.write_to_file(config_path)?;
 
         Ok(())
@@ -477,7 +477,7 @@ impl Renamer {
 
     /// Rename and update the project target files.
     fn update_target_files(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Updating target files.");
+        Log::process("Updating target files.");
         let original = &self
             .pathfinder
             .staging_dir()
@@ -489,13 +489,13 @@ impl Renamer {
             .join(&self.proj_final_name)
             .with_extension("Target.cs");
 
-        Print::step(
+        Log::step(
             "Update exec target",
             &format!("Renaming target file to: {}", &self.proj_final_name),
         );
         fs::rename(&original, &_final)?;
 
-        Print::step(
+        Log::step(
             "Update exec target",
             "Replacing instances of old project name within file.",
         );
@@ -518,13 +518,13 @@ impl Renamer {
             .join(format!("{}{}", &self.proj_final_name, "Editor"))
             .with_extension("Target.cs");
 
-        Print::step(
+        Log::step(
             "Update editor target",
             &format!("Renaming target file to: {}", &self.proj_final_name),
         );
         fs::rename(&original, &_final).unwrap();
 
-        Print::step(
+        Log::step(
             "Update editor target",
             "Replacing instances of old project name within file.",
         );
@@ -541,7 +541,7 @@ impl Renamer {
 
     /// Update the project primary game mode build file.
     fn update_build_file(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Updating primary game module build file.");
+        Log::process("Updating primary game module build file.");
         let original = &self
             .pathfinder
             .staging_dir()
@@ -553,10 +553,10 @@ impl Renamer {
             .join(&self.proj_final_name)
             .with_extension("Build.cs");
 
-        Print::step("Update build file", "Renaming file.");
+        Log::step("Update build file", "Renaming file.");
         fs::rename(&original, &_final)?;
 
-        Print::step(
+        Log::step(
             "Update build file",
             "Replacing old project name instances within file.",
         );
@@ -573,7 +573,7 @@ impl Renamer {
 
     /// Update project primary game module source files.
     fn update_module_source_files(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Updating primary game module source files.");
+        Log::process("Updating primary game module source files.");
 
         let original = &self
             .pathfinder
@@ -587,10 +587,10 @@ impl Renamer {
             .join(&self.proj_final_name)
             .with_extension("h");
 
-        Print::step("Update module files", "Renaming header file.");
+        Log::step("Update module files", "Renaming header file.");
         fs::rename(&original, &_final)?;
 
-        Print::step(
+        Log::step(
             "Update module files",
             "Replacing instances of old project name within header file.",
         );
@@ -614,10 +614,10 @@ impl Renamer {
             .join(&self.proj_final_name)
             .with_extension("cpp");
 
-        Print::step("Update module files", "Renaming source file.");
+        Log::step("Update module files", "Renaming source file.");
         fs::rename(&original, &_final)?;
 
-        Print::step(
+        Log::step(
             "Update module files",
             "Replacing instances of old project name within source file.",
         );
@@ -660,7 +660,7 @@ impl Renamer {
 
     /// Apply staged changes to live directory.
     fn apply(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Emplacing live directory files with staged files.");
+        Log::process("Emplacing live directory files with staged files.");
         Renamer::emplace_file(
             "Project Descriptor",
             &self
@@ -812,7 +812,7 @@ impl Renamer {
                                 format!("{}_API", renamer.proj_original_name.to_uppercase())
                                     .as_str(),
                             ) {
-                                Print::step(
+                                Log::step(
                                     "Emplace",
                                     &format!(
                                         "Replacing outdated _API references in file: {}.",
@@ -855,7 +855,7 @@ impl Renamer {
         staged: P,
         _final: P,
     ) -> Result<(), Box<dyn Error>> {
-        Print::step("Emplace", &format!("Emplacing {}", description));
+        Log::step("Emplace", &format!("Emplacing {}", description));
         fs::remove_file(&original)
             .expect(format!("Failed to delete original {}.", description).as_str());
         fs::copy(&staged, &_final)
@@ -867,20 +867,20 @@ impl Renamer {
     /// Rename the project Source/{project_name} subfolder.
     fn rename_source_subfolder(&self) -> Result<(), Box<dyn Error>> {
         if let ProjectType::Code = self.proj_type {
-            Print::process("Renaming source project subfolder");
+            Log::process("Renaming source project subfolder");
             let original = &self.pathfinder.source_proj_dir(&self.proj_original_name);
             let _final = &self.pathfinder.source_proj_dir(&self.proj_final_name);
-            Print::step("Source subfolder rename", "Renaming");
+            Log::step("Source subfolder rename", "Renaming");
             fs::rename(&original, &_final)?;
         }
         Ok(())
     }
     /// Rename the project root folder.
     fn rename_project_root(&mut self) -> Result<(), Box<dyn Error>> {
-        Print::process("Renaming root folder");
+        Log::process("Renaming root folder");
         let original = &self.proj_root;
         let _final = self.proj_root.with_file_name(&self.proj_final_name);
-        Print::step("Root folder rename", "Renaming");
+        Log::step("Root folder rename", "Renaming");
         fs::rename(&original, &_final)?;
         self.proj_root = _final;
 
@@ -889,8 +889,8 @@ impl Renamer {
 
     /// Request cleanup.
     fn request_cleanup(&self) -> Result<bool, Box<dyn Error>> {
-        Print::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
-        Print::prompt("[Y]es/[N]o");
+        Log::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
+        Log::prompt("[Y]es/[N]o");
 
         let mut buf = String::new();
         stdin().read_line(&mut buf)?;
@@ -909,30 +909,30 @@ impl Renamer {
 
     /// Cleanup *Saved*, *Intermediate*, and *Binaries* directories.
     fn cleanup(&self) -> Result<(), Box<dyn Error>> {
-        Print::process("Cleaning up outdated directories.");
+        Log::process("Cleaning up outdated directories.");
 
-        Print::step("Cleanup", "Deleting Saved directory.");
+        Log::step("Cleanup", "Deleting Saved directory.");
         let saved_dir = self.proj_root.join("Saved");
         if saved_dir.is_dir() {
             fs::remove_dir_all(saved_dir)?;
         } else {
-            Print::step("Cleanup", "Does not exist. Skipped.");
+            Log::step("Cleanup", "Does not exist. Skipped.");
         }
 
-        Print::step("Cleanup", "Deleting Intermediate directory.");
+        Log::step("Cleanup", "Deleting Intermediate directory.");
         let intermediate_dir = self.proj_root.join("Intermediate");
         if intermediate_dir.is_dir() {
             fs::remove_dir_all(intermediate_dir)?;
         } else {
-            Print::step("Cleanup", "Does not exist. Skipped.");
+            Log::step("Cleanup", "Does not exist. Skipped.");
         }
 
-        Print::step("Cleanup", "Deleting Binaries directory.");
+        Log::step("Cleanup", "Deleting Binaries directory.");
         let binaries_dir = self.proj_root.join("Binaries");
         if binaries_dir.is_dir() {
             fs::remove_dir_all(binaries_dir)?;
         } else {
-            Print::step("Cleanup", "Does not exist. Skipped.");
+            Log::step("Cleanup", "Does not exist. Skipped.");
         }
 
         Ok(())

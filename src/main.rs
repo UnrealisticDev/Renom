@@ -1,8 +1,8 @@
 mod pathfinder;
-mod printer;
+mod logger;
 mod renamer;
 
-use printer::Print;
+use logger::Log;
 use renamer::Renamer;
 
 use std::io::{stdin, Read};
@@ -10,9 +10,9 @@ use std::io::{stdin, Read};
 fn main() {
     let mut renamer = Renamer::new();
     if let Err(e) = renamer.start() {
-        Print::error(format!("Project rename failed: {}", e));
+        Log::error(format!("Project rename failed: {}", e));
     }
 
-    Print::prompt("Press Enter to exit.");
+    Log::prompt("Press Enter to exit.");
     let _ = stdin().read(&mut [0u8]);
 }
