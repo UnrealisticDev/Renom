@@ -1,4 +1,10 @@
+# Rust generated output
 /target
 
-# Test UE4 projects
-/testprojects
+# Generated files for test Unreal Engine projects
+test/**/Binaries/
+test/**/DerivedDataCache/
+test/**/Intermediate/
+test/**/Saved/
+test/**/.vs/
+*.sln
