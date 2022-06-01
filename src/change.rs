@@ -8,8 +8,8 @@ pub enum Change {
 
 #[derive(Debug, PartialEq)]
 pub struct RenameFile {
-    from: PathBuf,
-    to: PathBuf,
+    pub from: PathBuf,
+    pub to: PathBuf,
 }
 
 impl RenameFile {
@@ -23,10 +23,10 @@ impl RenameFile {
 
 #[derive(Debug, PartialEq)]
 pub struct AddEntryToIni {
-    path: PathBuf,
-    section: String,
-    key: String,
-    value: String,
+    pub path: PathBuf,
+    pub section: String,
+    pub key: String,
+    pub value: String,
 }
 
 impl AddEntryToIni {

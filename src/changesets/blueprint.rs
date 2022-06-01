@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use crate::change::{AddEntryToIni, Change, RenameFile};
 
 /// Generate a changeset to rename a Blueprint project from the
@@ -6,22 +8,35 @@ use crate::change::{AddEntryToIni, Change, RenameFile};
 /// - Rename the project descriptor file
 /// - Add a GameName entry under the URL section to the DefaultEngine.ini config file
 /// - Rename the project root directory
-pub fn generate_blueprint_changeset(old_project_name: &str, new_project_name: &str) -> Vec<Change> {
+pub fn generate_blueprint_changeset(
+    old_project_name: &str,
+    new_project_name: &str,
+    project_root: impl AsRef<Path>,
+) -> Vec<Change> {
     let mut changeset = vec![];
 
+    let project_root: PathBuf = project_root.as_ref().into();
+
     changeset.push(Change::RenameFile(RenameFile::new(
-        format!("{}.uproject", old_project_name),
-        format!("{}.uproject", new_project_name),
+        project_root
+            .join(old_project_name)
+            .with_extension("uproject"),
+        project_root
+            .join(new_project_name)
+            .with_extension("uproject"),
     )));
 
     changeset.push(Change::AddEntryToIni(AddEntryToIni::new(
-        "Config/DefaultEngine.ini",
+        project_root.join("Config/DefaultEngine.ini"),
         "URL",
         "GameName",
         new_project_name,
     )));
 
-    changeset.push(Change::RenameFile(RenameFile::new(".", new_project_name)));
+    changeset.push(Change::RenameFile(RenameFile::new(
+        &project_root,
+        project_root.with_file_name(new_project_name),
+    )));
 
     changeset
 }
@@ -36,7 +51,9 @@ mod tests {
     fn blueprint_changeset_is_correct() {
         let old_project_name = "Start";
         let new_project_name = "Finish";
-        let changeset = generate_blueprint_changeset(old_project_name, new_project_name);
+        let project_root = "";
+        let changeset =
+            generate_blueprint_changeset(old_project_name, new_project_name, project_root);
         let expected = vec![
             // Rename project descriptor
             Change::RenameFile(RenameFile::new("Start.uproject", "Finish.uproject")),
@@ -48,7 +65,7 @@ mod tests {
                 "Finish",
             )),
             // Rename project root
-            Change::RenameFile(RenameFile::new(".", "Finish")),
+            Change::RenameFile(RenameFile::new("", "Finish")),
         ];
 
         assert_eq!(changeset, expected);
