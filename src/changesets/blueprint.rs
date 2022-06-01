@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::change::{AddEntryToIni, Change, RenameFile};
+use crate::change::{Change, RenameFile, SetIniEntry};
 
 /// Generate a changeset to rename a Blueprint project from the
 /// old project name to the new project name. This includes the
@@ -26,7 +26,7 @@ pub fn generate_blueprint_changeset(
             .with_extension("uproject"),
     )));
 
-    changeset.push(Change::AddEntryToIni(AddEntryToIni::new(
+    changeset.push(Change::SetIniEntry(SetIniEntry::new(
         project_root.join("Config/DefaultEngine.ini"),
         "URL",
         "GameName",
@@ -58,7 +58,7 @@ mod tests {
             // Rename project descriptor
             Change::RenameFile(RenameFile::new("Start.uproject", "Finish.uproject")),
             // Add Game Name entry to ini file
-            Change::AddEntryToIni(AddEntryToIni::new(
+            Change::SetIniEntry(SetIniEntry::new(
                 "Config/DefaultEngine.ini",
                 "URL",
                 "GameName",
