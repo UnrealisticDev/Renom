@@ -1,4 +1,5 @@
 use ini::Ini;
+use regex::Regex;
 
 use crate::change::Change;
 
@@ -15,8 +16,9 @@ pub fn execute(changeset: Vec<Change>) {
                     &params.from, &params.to, &params.path
                 );
                 let data = std::fs::read_to_string(&params.path).unwrap();
-                let data_after_replace = data.replace(&params.from, &params.to);
-                std::fs::write(&params.path, data_after_replace).unwrap();
+                let regex = Regex::new(&params.from).unwrap();
+                let data_after_replace = regex.replace_all(&data, params.to.as_str()).to_string();
+                std::fs::write(&params.path, &data_after_replace).unwrap();
             }
             Change::SetIniEntry(params) => {
                 println!(

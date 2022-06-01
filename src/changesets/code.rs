@@ -17,13 +17,11 @@ use crate::change::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEnt
 /// - Rename game module header file
 /// - Rename game module source file
 /// - Rename source subfolder
-/// - Replace old name with new name in DefaultEngine config file
+/// - Update existing redirect entries in DefaultEngine config file
 /// - Append redirect entry to DefaultEngine config file
 /// - Add a GameName entry under the URL section to the DefaultEngine.ini config file
 /// - Replace old name with new name in config files
 /// - Rename project root directory
-/// @todo: Update the api referencers to do proper replace
-/// @todo: Update redirects in DefaultEngine config file
 pub fn generate_code_changeset(
     old_project_name: &str,
     new_project_name: &str,
@@ -172,11 +170,13 @@ pub fn generate_code_changeset(
     )));
 
     // Replace old project name with new project name in ini file
-    // @todo: Make this regex based to hit only redirects
     changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
         project_root.join("Config/DefaultEngine.ini"),
-        old_project_name,
-        new_project_name,
+        r#"\(OldGameName="(?P<old>.+?)",\s*NewGameName=".+?"\)"#,
+        format!(
+            r#"(OldGameName="$old", NewGameName="/Script/{}")"#,
+            new_project_name
+        ),
     )));
 
     // Append redirect entry to ini file
@@ -301,11 +301,11 @@ mod tests {
             )),
             // Rename source subfolder
             Change::RenameFile(RenameFile::new("Source/Start", "Source/Finish")),
-            // Replace old name with new name in ini file
+            // Update existing redirect entries in ini file
             Change::ReplaceInFile(ReplaceInFile::new(
                 "Config/DefaultEngine.ini",
-                old_project_name,
-                new_project_name,
+                r#"\(OldGameName="(?P<old>.+?)",\s*NewGameName=".+?"\)"#,
+                r#"(OldGameName="$old", NewGameName="/Script/Finish")"#,
             )),
             // Append redirect entry to ini file
             Change::AppendIniEntry(AppendIniEntry::new(
