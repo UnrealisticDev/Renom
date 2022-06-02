@@ -2,7 +2,7 @@ use ini::Ini;
 use regex::Regex;
 
 use crate::{
-    change::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
+    changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
     logger::Log,
 };
 

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::change::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry};
+use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry};
 
 /// Generate a changeset to rename a code project from the
 /// old project name to the new project name. This includes the
@@ -219,7 +219,7 @@ pub fn generate_code_changeset(
 mod tests {
     use std::path::PathBuf;
 
-    use crate::change::*;
+    use crate::changes::*;
 
     use super::generate_code_changeset;
 

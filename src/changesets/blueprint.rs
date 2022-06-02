@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::change::{Change, RenameFile, SetIniEntry};
+use crate::changes::{Change, RenameFile, SetIniEntry};
 
 /// Generate a changeset to rename a Blueprint project from the
 /// old project name to the new project name. This includes the
@@ -43,7 +43,7 @@ pub fn generate_blueprint_changeset(
 
 #[cfg(test)]
 mod tests {
-    use crate::change::*;
+    use crate::changes::*;
 
     use super::generate_blueprint_changeset;
 
