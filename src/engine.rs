@@ -8,6 +8,7 @@ use crate::{
 
 pub fn execute(changeset: Vec<Change>) {
     for change in changeset {
+        Log::process(format!("{}", change));
         let result = match change {
             Change::RenameFile(params) => rename_file(params),
             Change::ReplaceInFile(params) => replace_in_file(params),
@@ -26,18 +27,11 @@ pub fn execute(changeset: Vec<Change>) {
 }
 
 fn rename_file(params: RenameFile) -> std::io::Result<()> {
-    let message = format!("Renaming {:?} to {:?}", &params.from, &params.to);
-    Log::step("Apply", &message);
     std::fs::rename(params.from, params.to)?;
     Ok(())
 }
 
 fn replace_in_file(params: ReplaceInFile) -> std::io::Result<()> {
-    let message = format!(
-        "Replacing {} with {} in {:?}",
-        &params.from, &params.to, &params.path
-    );
-    Log::step("Apply", &message);
     let data = std::fs::read_to_string(&params.path)?;
     let regex = Regex::new(&params.from).unwrap(); // @todo: How do we want to handle this error?
     let data_after_replace = regex.replace_all(&data, params.to.as_str()).to_string();
@@ -46,11 +40,6 @@ fn replace_in_file(params: ReplaceInFile) -> std::io::Result<()> {
 }
 
 fn set_ini_entry(params: SetIniEntry) -> std::io::Result<()> {
-    let message = format!(
-        "Setting ini entry [{}] {} = {} in {:?}",
-        &params.section, &params.key, &params.value, &params.path
-    );
-    Log::step("Apply", &message);
     let mut config = Ini::load_from_file(&params.path).unwrap(); // @todo: Coerce to io result?
     config
         .with_section(Some(params.section))
@@ -60,10 +49,6 @@ fn set_ini_entry(params: SetIniEntry) -> std::io::Result<()> {
 }
 
 fn append_ini_entry(params: AppendIniEntry) -> std::io::Result<()> {
-    println!(
-        "Appending ini entry [{}] {} = {} in {:?}",
-        &params.section, &params.key, &params.value, &params.path
-    );
     let mut config = Ini::load_from_file(&params.path).unwrap(); // @todo: Coerce to io result?
     config
         .with_section(Some(&params.section))

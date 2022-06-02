@@ -1,6 +1,6 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct AppendIniEntry {
     pub path: PathBuf,
     pub section: String,
@@ -21,5 +21,18 @@ impl AppendIniEntry {
             key: key.into(),
             value: value.into(),
         }
+    }
+}
+
+impl Display for AppendIniEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Append section [{}], key [{}] with value [{}] in INI file [{}]",
+            &self.section,
+            &self.key,
+            &self.value,
+            &self.path.to_str().unwrap()
+        )
     }
 }

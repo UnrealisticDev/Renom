@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 #[derive(Debug, PartialEq)]
 pub struct SetIniEntry {
@@ -21,5 +21,18 @@ impl SetIniEntry {
             key: key.into(),
             value: value.into(),
         }
+    }
+}
+
+impl Display for SetIniEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Set section [{}], key [{}] to value [{}] in INI file [{}]",
+            &self.section,
+            &self.key,
+            &self.value,
+            &self.path.to_str().unwrap()
+        )
     }
 }

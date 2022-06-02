@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 #[derive(Debug, PartialEq)]
 pub struct RenameFile {
@@ -12,5 +12,16 @@ impl RenameFile {
             from: from.into(),
             to: to.into(),
         }
+    }
+}
+
+impl Display for RenameFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Rename [{}] to [{}]",
+            &self.from.to_str().unwrap(),
+            &self.to.to_str().unwrap()
+        )
     }
 }
