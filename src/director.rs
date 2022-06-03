@@ -90,7 +90,7 @@ impl Director {
                 Log::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
                 Log::prompt("[Y]es/[N]o");
                 if Director::request_cleanup() {
-                    ok_or_quit!(Director::cleanup(&project_root));
+                    ok_or_quit!(Director::cleanup(&project_root.with_file_name(&final_name)));
                 } else {
                     Log::basic("Cleanup skipped.");
                 }
