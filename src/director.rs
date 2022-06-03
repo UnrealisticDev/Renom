@@ -79,28 +79,43 @@ impl Director {
 
         Log::header("Application");
         let mut engine = Engine::new();
-        ok_or_quit!(engine.execute(changeset, &backup_dir));
+        match engine.execute(changeset, &backup_dir) {
+            Ok(_) => {
+                Log::header("Cleanup");
+                match project_type {
+                    ProjectType::Blueprint => {
+                        Log::basic("Nothing to clean up for Blueprint project.");
+                    }
+                    ProjectType::Code => {
+                        Log::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
+                        Log::prompt("[Y]es/[N]o");
+                        if Director::request_cleanup() {
+                            ok_or_quit!(Director::cleanup(
+                                &project_root.with_file_name(&final_name)
+                            ));
+                        } else {
+                            Log::basic("Cleanup skipped.");
+                        }
+                    }
+                }
 
-        Log::header("Cleanup");
-        match project_type {
-            ProjectType::Blueprint => {
-                Log::basic("Nothing to clean up for Blueprint project.");
+                Log::header("Success");
+                Log::basic("Project successfully renamed.");
             }
-            ProjectType::Code => {
-                Log::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
+            Err(err) => {
+                Log::error(err);
+                Log::header("Recovery");
+                Log::basic("Looks like things did not work out as planned. Would you like to revert the changes made so far?");
                 Log::prompt("[Y]es/[N]o");
-                if Director::request_cleanup() {
-                    ok_or_quit!(Director::cleanup(&project_root.with_file_name(&final_name)));
+                if Director::request_recover() {
+                    ok_or_quit!(engine.revert());
                 } else {
-                    Log::basic("Cleanup skipped.");
+                    Log::basic("Recovery skipped.");
                 }
             }
         }
 
-        Log::header("Success");
-        Log::basic("Project successfully renamed.");
         Log::newline();
-
         Log::prompt("Press Enter to exit.");
         let _ = stdin().read(&mut [0u8]);
     }
@@ -198,6 +213,13 @@ impl Director {
             .collect();
 
         Ok(files)
+    }
+
+    /// Request recover desired from the user.
+    fn request_recover() -> bool {
+        let mut buffer = String::new();
+        stdin().read_line(&mut buffer).unwrap();
+        matches!(buffer.trim(), "y" | "Y" | "yes" | "Yes")
     }
 
     /// Request cleanup desired from the user.

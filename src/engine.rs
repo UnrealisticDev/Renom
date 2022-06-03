@@ -32,7 +32,7 @@ impl Engine {
         backup_dir: impl AsRef<Path>,
     ) -> Result<(), String> {
         for change in changeset {
-            Log::basic(format!("{}", change));
+            Log::basic(format!("Apply: {}", change));
             self.execute_single(change, backup_dir.as_ref())?;
         }
         Ok(())
@@ -53,6 +53,16 @@ impl Engine {
             }
             Err(err) => Err(err.to_string()),
         }
+    }
+
+    /// Revert entire history of actions.
+    /// Upon error, it will halt execution and return the error.
+    pub fn revert(&mut self) -> Result<(), String> {
+        while let Some((change, revert)) = self.history.pop() {
+            Log::basic(format!("Revert: {}", change));
+            revert().map_err(|err| err.to_string())?;
+        }
+        Ok(())
     }
 }
 
