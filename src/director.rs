@@ -1,3 +1,5 @@
+use walkdir::WalkDir;
+
 use crate::{
     changesets::{generate_blueprint_changeset, generate_code_changeset},
     engine::Engine,
@@ -108,7 +110,7 @@ impl Director {
         let mut buffer = String::new();
         let root = stdin()
             .read_line(&mut buffer)
-            .map(|n| PathBuf::from(buffer.trim()))
+            .map(|_| PathBuf::from(buffer.trim()))
             .map_err(|err| err.to_string())?;
         root.is_dir()
             .then(|| root)
@@ -141,7 +143,7 @@ impl Director {
         let mut buffer = String::new();
         let final_name = stdin()
             .read_line(&mut buffer)
-            .map(|n| String::from(buffer.trim()))
+            .map(|_| String::from(buffer.trim()))
             .map_err(|err| err.to_string())?;
 
         if final_name.len() > 20 {
@@ -172,21 +174,26 @@ impl Director {
         Ok(backup_dir)
     }
 
-    /// Get files that include the project API macro. (@todo: Recurse)
+    /// Get files that include the project API macro.
     fn get_files_including_api_macro(
         project_root: &Path,
         original_name: &str,
     ) -> Result<Vec<PathBuf>, String> {
-        let files: Vec<PathBuf> = fs::read_dir(project_root.join("Source"))
-            .map_err(|err| err.to_string())?
+        let files: Vec<PathBuf> = WalkDir::new(project_root.join("Source").join(original_name))
+            .into_iter()
             .filter_map(|entry| entry.ok())
-            .map(|entry| entry.path())
+            .map(|entry| entry.path().to_owned())
             .filter(|path| {
                 let content = fs::read_to_string(path);
                 content.is_ok()
                     && content
                         .unwrap()
                         .contains(&format!("{}_API", original_name.to_uppercase()))
+            })
+            .filter_map(|path| {
+                path.strip_prefix(project_root)
+                    .map(|path| path.to_owned())
+                    .ok()
             })
             .collect();
 
