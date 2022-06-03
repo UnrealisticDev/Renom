@@ -18,11 +18,6 @@ impl Log {
         println!("\n[ {} ]", text.as_ref().green());
     }
 
-    /// Print a process.
-    pub fn process<S: AsRef<str>>(text: S) {
-        println!("{}{}", "===".magenta(), text.as_ref());
-    }
-
     /// Print the text without any frills.
     pub fn basic<S: AsRef<str>>(text: S) {
         println!("{}", text.as_ref());
@@ -34,14 +29,9 @@ impl Log {
         stdout().flush().unwrap();
     }
 
-    /// Print a step in a process.
-    pub fn step<S: AsRef<str>>(process: S, step: S) {
-        println!("{}: {}", process.as_ref().magenta(), step.as_ref())
-    }
-
     /// Print a newline.
     pub fn newline() {
-        println!("");
+        println!();
     }
 
     /// Print an error.
