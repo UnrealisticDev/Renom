@@ -72,7 +72,6 @@ impl Director {
                     &project_root,
                     &original_name
                 )),
-                ok_or_quit!(Director::get_config_files(&project_root)),
             ),
         };
 
@@ -189,17 +188,6 @@ impl Director {
                         .unwrap()
                         .contains(&format!("{}_API", original_name.to_uppercase()))
             })
-            .collect();
-
-        Ok(files)
-    }
-
-    /// Get files that reside in the project Config folder. (@todo: Recurse)
-    fn get_config_files(project_root: &Path) -> Result<Vec<PathBuf>, String> {
-        let files: Vec<PathBuf> = fs::read_dir(project_root.join("Config"))
-            .map_err(|err| err.to_string())?
-            .filter_map(|entry| entry.ok())
-            .map(|entry| entry.path().strip_prefix(project_root).unwrap().to_owned())
             .collect();
 
         Ok(files)

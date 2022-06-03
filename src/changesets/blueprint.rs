@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::changes::{Change, RenameFile, SetIniEntry};
 
@@ -13,32 +13,43 @@ pub fn generate_blueprint_changeset(
     new_project_name: &str,
     project_root: impl AsRef<Path>,
 ) -> Vec<Change> {
-    let mut changeset = vec![];
+    let project_root = project_root.as_ref();
+    vec![
+        rename_project_descriptor(project_root, old_project_name, new_project_name),
+        add_game_name_to_engine_config(project_root, new_project_name),
+        rename_project_root(project_root, new_project_name),
+    ]
+}
 
-    let project_root: PathBuf = project_root.as_ref().into();
-
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_project_descriptor(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join(old_project_name)
             .with_extension("uproject"),
         project_root
             .join(new_project_name)
             .with_extension("uproject"),
-    )));
+    ))
+}
 
-    changeset.push(Change::SetIniEntry(SetIniEntry::new(
+fn add_game_name_to_engine_config(project_root: &Path, new_project_name: &str) -> Change {
+    Change::SetIniEntry(SetIniEntry::new(
         project_root.join("Config/DefaultEngine.ini"),
         "URL",
         "GameName",
         new_project_name,
-    )));
+    ))
+}
 
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_project_root(project_root: &Path, new_project_name: &str) -> Change {
+    Change::RenameFile(RenameFile::new(
         &project_root,
         project_root.with_file_name(new_project_name),
-    )));
-
-    changeset
+    ))
 }
 
 #[cfg(test)]

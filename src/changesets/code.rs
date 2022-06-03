@@ -20,46 +20,95 @@ use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEn
 /// - Update existing redirect entries in DefaultEngine config file
 /// - Append redirect entry to DefaultEngine config file
 /// - Add a GameName entry under the URL section to the DefaultEngine.ini config file
-/// - Replace old name with new name in config files
 /// - Rename project root directory
 pub fn generate_code_changeset(
     old_project_name: &str,
     new_project_name: &str,
     project_root: impl AsRef<Path>,
     api_reference_files: Vec<PathBuf>,
-    old_config_files: Vec<PathBuf>,
 ) -> Vec<Change> {
+    let project_root = project_root.as_ref();
     let mut changeset = vec![];
 
-    let project_root: PathBuf = project_root.as_ref().into();
+    changeset.extend(vec![
+        replace_in_project_descriptor(project_root, old_project_name, new_project_name),
+        rename_project_descriptor(project_root, old_project_name, new_project_name),
+        replace_in_exec_target_file(project_root, old_project_name, new_project_name),
+        rename_exec_target_file(project_root, old_project_name, new_project_name),
+        replace_in_ed_target_file(project_root, old_project_name, new_project_name),
+        rename_ed_target_file(project_root, old_project_name, new_project_name),
+        replace_in_mod_build_file(project_root, old_project_name, new_project_name),
+        rename_mod_build_file(project_root, old_project_name, new_project_name),
+    ]);
 
-    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+    changeset.extend(api_reference_files.iter().map(|header| {
+        replace_api_macro_in_header_file(project_root, header, old_project_name, new_project_name)
+    }));
+
+    changeset.extend(vec![
+        rename_mod_header_file(project_root, old_project_name, new_project_name),
+        replace_in_mod_source_file(project_root, old_project_name, new_project_name),
+        rename_mod_source_file(project_root, old_project_name, new_project_name),
+        rename_source_subfolder(project_root, old_project_name, new_project_name),
+        update_redirects_in_engine_config(project_root, new_project_name),
+        append_redirect_to_engine_config(project_root, old_project_name, new_project_name),
+        add_game_name_to_engine_config(project_root, new_project_name),
+        rename_project_root(project_root, new_project_name),
+    ]);
+
+    changeset
+}
+
+fn replace_in_project_descriptor(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
         project_root
             .join(old_project_name)
             .with_extension("uproject"),
         old_project_name,
         new_project_name,
-    )));
+    ))
+}
 
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_project_descriptor(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join(old_project_name)
             .with_extension("uproject"),
         project_root
             .join(new_project_name)
             .with_extension("uproject"),
-    )));
+    ))
+}
 
-    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+fn replace_in_exec_target_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
             .with_extension("Target.cs"),
         old_project_name,
         new_project_name,
-    )));
+    ))
+}
 
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_exec_target_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
@@ -68,18 +117,30 @@ pub fn generate_code_changeset(
             .join("Source")
             .join(new_project_name)
             .with_extension("Target.cs"),
-    )));
+    ))
+}
 
-    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+fn replace_in_ed_target_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
         project_root
             .join("Source")
             .join(format!("{}Editor", old_project_name))
             .with_extension("Target.cs"),
         old_project_name,
         new_project_name,
-    )));
+    ))
+}
 
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_ed_target_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join("Source")
             .join(format!("{}Editor", old_project_name))
@@ -88,10 +149,15 @@ pub fn generate_code_changeset(
             .join("Source")
             .join(format!("{}Editor", new_project_name))
             .with_extension("Target.cs"),
-    )));
+    ))
+}
 
-    // Replace old name with new name in game module build file
-    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+fn replace_in_mod_build_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
@@ -99,10 +165,15 @@ pub fn generate_code_changeset(
             .with_extension("Build.cs"),
         old_project_name,
         new_project_name,
-    )));
+    ))
+}
 
-    // Rename game module build file
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_mod_build_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
@@ -113,19 +184,28 @@ pub fn generate_code_changeset(
             .join(old_project_name)
             .join(new_project_name)
             .with_extension("Build.cs"),
-    )));
+    ))
+}
 
-    // Replace old name with new name api references in header files
-    for referencer in api_reference_files {
-        changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
-            project_root.join(referencer),
-            format!("{}_API", old_project_name.to_uppercase()),
-            format!("{}_API", new_project_name.to_uppercase()),
-        )));
-    }
+fn replace_api_macro_in_header_file(
+    project_root: &Path,
+    header: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        project_root.join(header),
+        format!("{}_API", old_project_name.to_uppercase()),
+        format!("{}_API", new_project_name.to_uppercase()),
+    ))
+}
 
-    // Rename game module header file
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_mod_header_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
@@ -136,10 +216,15 @@ pub fn generate_code_changeset(
             .join(old_project_name)
             .join(new_project_name)
             .with_extension("h"),
-    )));
+    ))
+}
 
-    // Replace old name with new name api references in header files
-    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+fn replace_in_mod_source_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
@@ -147,10 +232,15 @@ pub fn generate_code_changeset(
             .with_extension("cpp"),
         old_project_name,
         new_project_name,
-    )));
+    ))
+}
 
-    // Rename game module source file
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_mod_source_file(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root
             .join("Source")
             .join(old_project_name)
@@ -161,26 +251,37 @@ pub fn generate_code_changeset(
             .join(old_project_name)
             .join(new_project_name)
             .with_extension("cpp"),
-    )));
+    ))
+}
 
-    // Rename source subfolder
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_source_subfolder(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::RenameFile(RenameFile::new(
         project_root.join("Source").join(old_project_name),
         project_root.join("Source").join(new_project_name),
-    )));
+    ))
+}
 
-    // Replace old project name with new project name in ini file
-    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+fn update_redirects_in_engine_config(project_root: &Path, new_project_name: &str) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
         project_root.join("Config/DefaultEngine.ini"),
         r#"\(OldGameName="(?P<old>.+?)",\s*NewGameName=".+?"\)"#,
         format!(
             r#"(OldGameName="$old", NewGameName="/Script/{}")"#,
             new_project_name
         ),
-    )));
+    ))
+}
 
-    // Append redirect entry to ini file
-    changeset.push(Change::AppendIniEntry(AppendIniEntry::new(
+fn append_redirect_to_engine_config(
+    project_root: &Path,
+    old_project_name: &str,
+    new_project_name: &str,
+) -> Change {
+    Change::AppendIniEntry(AppendIniEntry::new(
         project_root.join("Config/DefaultEngine.ini"),
         "/Script/Engine.Engine",
         "+ActiveGameNameRedirects",
@@ -188,31 +289,23 @@ pub fn generate_code_changeset(
             r#"(OldGameName="/Script/{}", NewGameName="/Script/{}")"#,
             old_project_name, new_project_name
         ),
-    )));
+    ))
+}
 
-    // Add Game Name entry to ini file
-    changeset.push(Change::SetIniEntry(SetIniEntry::new(
+fn add_game_name_to_engine_config(project_root: &Path, new_project_name: &str) -> Change {
+    Change::SetIniEntry(SetIniEntry::new(
         project_root.join("Config/DefaultEngine.ini"),
         "URL",
         "GameName",
         new_project_name,
-    )));
+    ))
+}
 
-    // Replace old name with new name in config files
-    for reference in old_config_files {
-        changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
-            project_root.join(reference),
-            old_project_name,
-            new_project_name,
-        )));
-    }
-
-    changeset.push(Change::RenameFile(RenameFile::new(
+fn rename_project_root(project_root: &Path, new_project_name: &str) -> Change {
+    Change::RenameFile(RenameFile::new(
         &project_root,
         project_root.with_file_name(new_project_name),
-    )));
-
-    changeset
+    ))
 }
 
 #[cfg(test)]
@@ -233,7 +326,6 @@ mod tests {
             new_project_name,
             project_root,
             vec![PathBuf::from("Source/Start/StartGameModeBase.h")],
-            vec![PathBuf::from("Config/DefaultGame.ini")],
         );
         let expected = vec![
             // Replace old name with new name in project descriptor
@@ -320,12 +412,6 @@ mod tests {
                 "URL",
                 "GameName",
                 "Finish",
-            )),
-            // Replace old name with new name in config files
-            Change::ReplaceInFile(ReplaceInFile::new(
-                "Config/DefaultGame.ini",
-                old_project_name,
-                new_project_name,
             )),
             // Rename project root
             Change::RenameFile(RenameFile::new("", "Finish")),
