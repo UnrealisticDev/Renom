@@ -20,8 +20,8 @@ impl Display for RenameFile {
         write!(
             f,
             "Rename [{}] to [{}]",
-            &self.from.to_str().unwrap(),
-            &self.to.to_str().unwrap()
+            &self.from.to_str().unwrap_or("invalid Unicode path"),
+            &self.to.to_str().unwrap_or("invalid Unicode path")
         )
     }
 }

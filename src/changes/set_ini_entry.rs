@@ -32,7 +32,7 @@ impl Display for SetIniEntry {
             &self.section,
             &self.key,
             &self.value,
-            &self.path.to_str().unwrap()
+            &self.path.to_str().unwrap_or("invalid Unicode path")
         )
     }
 }

@@ -24,7 +24,7 @@ impl Display for ReplaceInFile {
             "Replace [{}] with [{}] in file [{}]",
             &self.from,
             &self.to,
-            &self.path.to_str().unwrap()
+            &self.path.to_str().unwrap_or("invalid Unicode path")
         )
     }
 }

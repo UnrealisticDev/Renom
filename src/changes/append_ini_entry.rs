@@ -28,11 +28,11 @@ impl Display for AppendIniEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Append section [{}], key [{}] with value [{}] in INI file [{}]",
-            &self.section,
+            "Append key [{}] with value [{}] to section [{}] in INI file [{}]",
             &self.key,
             &self.value,
-            &self.path.to_str().unwrap()
+            &self.section,
+            &self.path.to_str().unwrap_or("invalid Unicode path")
         )
     }
 }
