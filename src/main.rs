@@ -1,18 +1,11 @@
-mod pathfinder;
+mod changes;
+mod changesets;
+mod director;
+mod engine;
 mod logger;
-mod renamer;
 
-use logger::Log;
-use renamer::Renamer;
-
-use std::io::{stdin, Read};
+use director::Director;
 
 fn main() {
-    let mut renamer = Renamer::new();
-    if let Err(e) = renamer.start() {
-        Log::error(format!("Project rename failed: {}", e));
-    }
-
-    Log::prompt("Press Enter to exit.");
-    let _ = stdin().read(&mut [0u8]);
+    Director::start_interactive_rename();
 }
