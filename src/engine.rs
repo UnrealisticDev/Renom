@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 use ini::Ini;
 use regex::Regex;
@@ -9,7 +12,7 @@ use crate::{
     logger::Log,
 };
 
-type Revert = Box<dyn Fn() -> std::io::Result<()>>;
+type Revert = Box<dyn Fn() -> io::Result<()>>;
 
 pub struct Engine {
     history: Vec<(Change, Revert)>,
@@ -19,6 +22,10 @@ impl Engine {
     pub fn new() -> Self {
         Self { history: vec![] }
     }
+
+    /// Execute a series of changes in sequential order and stores the
+    /// applied changes in history with appropriate revert actions.
+    /// Upon error, it will halt execution and return the error.
     pub fn execute(
         &mut self,
         changeset: Vec<Change>,
@@ -49,7 +56,7 @@ impl Engine {
     }
 }
 
-fn rename_file(params: &RenameFile) -> std::io::Result<Revert> {
+fn rename_file(params: &RenameFile) -> io::Result<Revert> {
     let before = params.from.clone();
     let after = params.to.clone();
 
@@ -58,14 +65,14 @@ fn rename_file(params: &RenameFile) -> std::io::Result<Revert> {
     Ok(Box::new(move || std::fs::rename(&after, &before)))
 }
 
-fn replace_in_file(params: &ReplaceInFile, backup_dir: &Path) -> std::io::Result<Revert> {
+fn replace_in_file(params: &ReplaceInFile, backup_dir: &Path) -> io::Result<Revert> {
     let before = backup_file(&params.path, backup_dir)?;
     let after = params.path.clone();
 
-    let data = std::fs::read_to_string(&params.path)?;
-    let regex = Regex::new(&params.from).unwrap(); // @todo: How do we want to handle this error?
-    let data_after_replace = regex.replace_all(&data, params.to.as_str()).to_string();
-    std::fs::write(&params.path, &data_after_replace)?;
+    let content = std::fs::read_to_string(&params.path)?;
+    let regex = Regex::new(&params.from).expect("invalid regex; coding error"); // Should panic; regex is hard-coded
+    let content_after_replace = regex.replace_all(&content, params.to.as_str()).to_string();
+    std::fs::write(&params.path, &content_after_replace)?;
 
     Ok(Box::new(move || {
         std::fs::copy(&before, &after)?;
@@ -73,15 +80,20 @@ fn replace_in_file(params: &ReplaceInFile, backup_dir: &Path) -> std::io::Result
     }))
 }
 
-fn set_ini_entry(params: &SetIniEntry, backup_dir: &Path) -> std::io::Result<Revert> {
+fn set_ini_entry(params: &SetIniEntry, backup_dir: &Path) -> io::Result<Revert> {
     let before = backup_file(&params.path, backup_dir)?;
     let after = params.path.clone();
 
-    let mut config = Ini::load_from_file(&params.path).unwrap(); // @todo: Coerce to io result?
-    config
-        .with_section(Some(&params.section))
+    let mut ini = match Ini::load_from_file(&params.path) {
+        Ok(ini) => ini,
+        Err(err) => match err {
+            ini::ini::Error::Io(io) => return Err(io),
+            ini::ini::Error::Parse(p) => return Err(io::Error::new(io::ErrorKind::Other, p)),
+        },
+    };
+    ini.with_section(Some(&params.section))
         .set(&params.key, &params.value);
-    config.write_to_file(&params.path)?;
+    ini.write_to_file(&params.path)?;
 
     Ok(Box::new(move || {
         std::fs::copy(&before, &after)?;
@@ -89,20 +101,24 @@ fn set_ini_entry(params: &SetIniEntry, backup_dir: &Path) -> std::io::Result<Rev
     }))
 }
 
-fn append_ini_entry(params: &AppendIniEntry, backup_dir: &Path) -> std::io::Result<Revert> {
+fn append_ini_entry(params: &AppendIniEntry, backup_dir: &Path) -> io::Result<Revert> {
     let before = backup_file(&params.path, backup_dir)?;
     let after = params.path.clone();
 
-    let mut config = Ini::load_from_file(&params.path).unwrap(); // @todo: Coerce to io result?
-    config
-        .with_section(Some(&params.section))
+    let mut ini = match Ini::load_from_file(&params.path) {
+        Ok(ini) => ini,
+        Err(err) => match err {
+            ini::ini::Error::Io(io) => return Err(io),
+            ini::ini::Error::Parse(p) => return Err(io::Error::new(io::ErrorKind::Other, p)),
+        },
+    };
+    ini.with_section(Some(&params.section))
         .set("dummy", "dummy");
-    config
-        .section_mut(Some(&params.section))
-        .unwrap()
+    ini.section_mut(Some(&params.section))
+        .expect("ini section missing after create") // Should panic; section created right above
         .append(&params.key, &params.value);
-    config.with_section(Some(&params.section)).delete(&"dummy");
-    config.write_to_file(&params.path)?;
+    ini.with_section(Some(&params.section)).delete(&"dummy");
+    ini.write_to_file(&params.path)?;
 
     Ok(Box::new(move || {
         std::fs::copy(&before, &after)?;
@@ -110,7 +126,7 @@ fn append_ini_entry(params: &AppendIniEntry, backup_dir: &Path) -> std::io::Resu
     }))
 }
 
-fn backup_file(file: &Path, backup_dir: &Path) -> std::io::Result<PathBuf> {
+fn backup_file(file: &Path, backup_dir: &Path) -> io::Result<PathBuf> {
     let content = std::fs::read_to_string(file)?;
     let hash = Sha256::digest(&content);
     let path = backup_dir.join(format!("{:x}", hash));
