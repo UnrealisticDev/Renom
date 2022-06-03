@@ -19,13 +19,19 @@ impl Engine {
     pub fn new() -> Self {
         Self { history: vec![] }
     }
-    pub fn execute(&mut self, changeset: Vec<Change>, backup_dir: impl AsRef<Path>) {
+    pub fn execute(
+        &mut self,
+        changeset: Vec<Change>,
+        backup_dir: impl AsRef<Path>,
+    ) -> Result<(), String> {
         for change in changeset {
-            self.execute_single(change, backup_dir.as_ref());
+            Log::basic(format!("{}", change));
+            self.execute_single(change, backup_dir.as_ref())?;
         }
+        Ok(())
     }
 
-    pub fn execute_single(&mut self, change: Change, backup_dir: &Path) {
+    fn execute_single(&mut self, change: Change, backup_dir: &Path) -> Result<(), String> {
         let result = match &change {
             Change::RenameFile(params) => rename_file(params),
             Change::ReplaceInFile(params) => replace_in_file(params, backup_dir),
@@ -33,10 +39,12 @@ impl Engine {
             Change::AppendIniEntry(params) => append_ini_entry(params, backup_dir),
         };
 
-        // @todo: Surface this error, so that we can revert if necessary
         match result {
-            Ok(revert) => self.history.push((change, revert)),
-            Err(err) => Log::error(err.to_string()),
+            Ok(revert) => {
+                self.history.push((change, revert));
+                Ok(())
+            }
+            Err(err) => Err(err.to_string()),
         }
     }
 }
