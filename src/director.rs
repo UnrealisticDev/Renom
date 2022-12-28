@@ -3,7 +3,7 @@ use walkdir::WalkDir;
 use crate::{
     changesets::{generate_blueprint_changeset, generate_code_changeset},
     engine::Engine,
-    logger::Log,
+    presentation::log,
 };
 use std::{
     fs,
@@ -19,7 +19,7 @@ macro_rules! ok_or_quit {
         match $e {
             Ok(t) => t,
             Err(e) => {
-                Log::error(e);
+                log::error(e);
                 return;
             }
         }
@@ -32,29 +32,29 @@ enum ProjectType {
 }
 
 pub fn start_interactive_rename() {
-    Log::check_support_for_colors();
-    Log::header("Welcome to Renom");
-    Log::header("Project Details");
-    Log::basic("Tell us a little about your project.");
+    log::check_support_for_colors();
+    log::header("Welcome to Renom");
+    log::header("Project Details");
+    log::basic("Tell us a little about your project.");
 
-    Log::prompt("Project root");
+    log::prompt("Project root");
     let project_root = ok_or_quit!(request_project_root());
 
     let original_name = ok_or_quit!(infer_original_project_name(&project_root));
-    Log::basic(format!("Project original name: {}", &original_name));
+    log::basic(format!("Project original name: {}", &original_name));
 
-    Log::prompt("Project final name");
+    log::prompt("Project final name");
     let final_name = ok_or_quit!(request_final_project_name(&original_name));
 
     let project_type = detect_project_type(&project_root);
     match project_type {
-        ProjectType::Blueprint => Log::basic("Blueprint project detected."),
-        ProjectType::Code => Log::basic("Code project detected."),
+        ProjectType::Blueprint => log::basic("Blueprint project detected."),
+        ProjectType::Code => log::basic("Code project detected."),
     }
 
-    Log::header("Staging");
+    log::header("Staging");
     let backup_dir = ok_or_quit!(create_backup_dir(&project_root));
-    Log::basic(format!(
+    log::basic(format!(
         "Created backup directory at {}",
         backup_dir.to_str().unwrap()
     ));
@@ -71,44 +71,44 @@ pub fn start_interactive_rename() {
         ),
     };
 
-    Log::header("Application");
+    log::header("Application");
     let mut engine = Engine::new();
     match engine.execute(changeset, &backup_dir) {
         Ok(_) => {
-            Log::header("Cleanup");
+            log::header("Cleanup");
             match project_type {
                 ProjectType::Blueprint => {
-                    Log::basic("Nothing to clean up for Blueprint project.");
+                    log::basic("Nothing to clean up for Blueprint project.");
                 }
                 ProjectType::Code => {
-                    Log::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
-                    Log::prompt("[Y]es/[N]o");
+                    log::basic("Though not strictly necessary, it is a good idea to clean up outdated Saved, Intermediate, and Binaries folders.\nShall we go ahead and do so for you?");
+                    log::prompt("[Y]es/[N]o");
                     if request_cleanup() {
                         ok_or_quit!(cleanup(&project_root.with_file_name(&final_name)));
                     } else {
-                        Log::basic("Cleanup skipped.");
+                        log::basic("Cleanup skipped.");
                     }
                 }
             }
 
-            Log::header("Success");
-            Log::basic("Project successfully renamed.");
+            log::header("Success");
+            log::basic("Project successfully renamed.");
         }
         Err(err) => {
-            Log::error(err);
-            Log::header("Recovery");
-            Log::basic("Looks like things did not work out as planned. Would you like to revert the changes made so far?");
-            Log::prompt("[Y]es/[N]o");
+            log::error(err);
+            log::header("Recovery");
+            log::basic("Looks like things did not work out as planned. Would you like to revert the changes made so far?");
+            log::prompt("[Y]es/[N]o");
             if request_recover() {
                 ok_or_quit!(engine.revert());
             } else {
-                Log::basic("Recovery skipped.");
+                log::basic("Recovery skipped.");
             }
         }
     }
 
-    Log::newline();
-    Log::prompt("Press Enter to exit.");
+    log::newline();
+    log::prompt("Press Enter to exit.");
     let _ = stdin().read(&mut [0u8]);
 }
 
@@ -223,28 +223,28 @@ fn request_cleanup() -> bool {
 
 /// Cleanup *Saved*, *Intermediate*, and *Binaries* directories.
 fn cleanup(project_root: &Path) -> Result<(), String> {
-    Log::basic("Deleting Saved directory.");
+    log::basic("Deleting Saved directory.");
     let saved_dir = project_root.join("Saved");
     if saved_dir.is_dir() {
         fs::remove_dir_all(saved_dir).map_err(|err| err.to_string())?;
     } else {
-        Log::basic("Does not exist. Skipped.");
+        log::basic("Does not exist. Skipped.");
     }
 
-    Log::basic("Deleting Intermediate directory.");
+    log::basic("Deleting Intermediate directory.");
     let intermediate_dir = project_root.join("Intermediate");
     if intermediate_dir.is_dir() {
         fs::remove_dir_all(intermediate_dir).map_err(|err| err.to_string())?;
     } else {
-        Log::basic("Does not exist. Skipped.");
+        log::basic("Does not exist. Skipped.");
     }
 
-    Log::basic("Deleting Binaries directory.");
+    log::basic("Deleting Binaries directory.");
     let binaries_dir = project_root.join("Binaries");
     if binaries_dir.is_dir() {
         fs::remove_dir_all(binaries_dir).map_err(|err| err.to_string())?;
     } else {
-        Log::basic("Does not exist. Skipped.");
+        log::basic("Does not exist. Skipped.");
     }
 
     Ok(())

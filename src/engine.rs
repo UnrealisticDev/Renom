@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 
 use crate::{
     changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
-    logger::Log,
+    presentation::log,
 };
 
 type Revert = Box<dyn Fn() -> io::Result<()>>;
@@ -32,7 +32,7 @@ impl Engine {
         backup_dir: impl AsRef<Path>,
     ) -> Result<(), String> {
         for change in changeset {
-            Log::basic(format!("Apply: {}", change));
+            log::basic(format!("Apply: {}", change));
             self.execute_single(change, backup_dir.as_ref())?;
         }
         Ok(())
@@ -59,7 +59,7 @@ impl Engine {
     /// Upon error, it will halt execution and return the error.
     pub fn revert(&mut self) -> Result<(), String> {
         while let Some((change, revert)) = self.history.pop() {
-            Log::basic(format!("Revert: {}", change));
+            log::basic(format!("Revert: {}", change));
             revert().map_err(|err| err.to_string())?;
         }
         Ok(())

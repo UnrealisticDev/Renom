@@ -1,9 +1,7 @@
-use colored::*;
-use std::io::{stdout, Write};
+pub mod log {
+    use colored::*;
+    use std::io::{stdout, Write};
 
-pub struct Log;
-
-impl Log {
     /// Toggles coloring based on environment.
     /// For instance, colors do not work for `cmd`on Windows.
     pub fn check_support_for_colors() {
