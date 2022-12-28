@@ -37,7 +37,7 @@ pub fn start_interactive_rename() {
     log::header("Project Details");
     log::basic("Tell us a little about your project.");
 
-    log::prompt("Project root");
+    log::prompt("Project root directory path");
     let project_root = ok_or_quit!(request_project_root());
 
     let original_name = ok_or_quit!(infer_original_project_name(&project_root));
