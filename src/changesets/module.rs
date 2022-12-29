@@ -71,14 +71,7 @@ fn find_mod_implementation(project_root: &Path, old_name: &str) -> Option<PathBu
         .map(|entry| entry.path().to_owned())
         .filter(|path| path.is_file() && path.extension().map_or(false, |ext| ext == "cpp"))
         .find(|source_file| match fs::read_to_string(source_file) {
-            Ok(content) => {
-                let contains = content.contains("_MODULE");
-                println!(
-                    "Source {:?} contains implementation: {}",
-                    source_file, contains
-                );
-                contains
-            }
+            Ok(content) => content.contains("_MODULE"),
             Err(_) => false,
         })
 }
