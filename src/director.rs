@@ -63,12 +63,7 @@ pub fn start_interactive_rename() {
         ProjectType::Blueprint => {
             generate_blueprint_changeset(&original_name, &final_name, &project_root)
         }
-        ProjectType::Code => generate_code_changeset(
-            &original_name,
-            &final_name,
-            &project_root,
-            ok_or_quit!(get_files_including_api_macro(&project_root, &original_name)),
-        ),
+        ProjectType::Code => generate_code_changeset(&original_name, &final_name, &project_root),
     };
 
     log::header("Application");
@@ -179,32 +174,6 @@ fn create_backup_dir(project_root: &Path) -> Result<PathBuf, String> {
     let backup_dir = project_root.join(".renom/backup");
     fs::create_dir_all(&backup_dir).map_err(|err| err.to_string())?;
     Ok(backup_dir)
-}
-
-/// Get files that include the project API macro.
-fn get_files_including_api_macro(
-    project_root: &Path,
-    original_name: &str,
-) -> Result<Vec<PathBuf>, String> {
-    let files: Vec<PathBuf> = WalkDir::new(project_root.join("Source").join(original_name))
-        .into_iter()
-        .filter_map(|entry| entry.ok())
-        .map(|entry| entry.path().to_owned())
-        .filter(|path| {
-            let content = fs::read_to_string(path);
-            content.is_ok()
-                && content
-                    .unwrap()
-                    .contains(&format!("{}_API", original_name.to_uppercase()))
-        })
-        .filter_map(|path| {
-            path.strip_prefix(project_root)
-                .map(|path| path.to_owned())
-                .ok()
-        })
-        .collect();
-
-    Ok(files)
 }
 
 /// Request recover desired from the user.

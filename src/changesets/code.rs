@@ -35,7 +35,6 @@ pub fn generate_code_changeset(
     old_project_name: &str,
     new_project_name: &str,
     project_root: impl AsRef<Path>,
-    api_reference_files: Vec<PathBuf>,
 ) -> Vec<Change> {
     let project_root = project_root.as_ref();
     let mut changeset = vec![];
@@ -55,7 +54,6 @@ pub fn generate_code_changeset(
                 &new_module_name,
                 project_root,
                 old_project_name,
-                &api_reference_files,
             ))
         });
 
@@ -228,12 +226,7 @@ mod tests {
         let old_project_name = "Start";
         let new_project_name = "Finish";
         let project_root = "";
-        let changeset = generate_code_changeset(
-            old_project_name,
-            new_project_name,
-            project_root,
-            vec![PathBuf::from("Source/Start/StartGameModeBase.h")],
-        );
+        let changeset = generate_code_changeset(old_project_name, new_project_name, project_root);
         let expected = vec![
             // Replace old name with new name in project descriptor
             Change::ReplaceInFile(ReplaceInFile::new(

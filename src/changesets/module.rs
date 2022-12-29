@@ -13,14 +13,12 @@ use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
 /// - Rename target class
 /// - Rename target file
 ///
-/// @todo: port API references here to be per module
 /// @todo: replace module name in other modules
 pub fn generate_module_changeset(
     old_name: &str,
     new_name: &str,
     project_root: impl AsRef<Path>,
     project_name: &str,
-    api_reference_files: &[PathBuf],
 ) -> Vec<Change> {
     let project_root = project_root.as_ref();
     let mut changeset = vec![
@@ -34,9 +32,11 @@ pub fn generate_module_changeset(
     }
 
     changeset.extend(
-        api_reference_files.iter().map(|header| {
-            replace_api_macro_in_header_file(project_root, header, old_name, new_name)
-        }),
+        get_files_including_api_macro(project_root, old_name)
+            .iter()
+            .map(|header| {
+                replace_api_macro_in_header_file(project_root, header, old_name, new_name)
+            }),
     );
 
     changeset.push(rename_source_subfolder(project_root, old_name, new_name));
@@ -164,6 +164,28 @@ fn rename_build_class(
         old_project_name,
         new_project_name,
     ))
+}
+
+fn get_files_including_api_macro(project_root: &Path, mod_name: &str) -> Vec<PathBuf> {
+    let files: Vec<PathBuf> = WalkDir::new(project_root.join("Source").join(mod_name))
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path().to_owned())
+        .filter(|path| {
+            let content = fs::read_to_string(path);
+            content.is_ok()
+                && content
+                    .unwrap()
+                    .contains(&format!("{}_API", mod_name.to_uppercase()))
+        })
+        .filter_map(|path| {
+            path.strip_prefix(project_root)
+                .map(|path| path.to_owned())
+                .ok()
+        })
+        .collect();
+
+    files
 }
 
 fn replace_api_macro_in_header_file(
