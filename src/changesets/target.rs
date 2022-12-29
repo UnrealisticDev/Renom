@@ -6,6 +6,7 @@ use crate::changes::{Change, RenameFile, ReplaceInFile};
 /// following changes:
 /// - Rename target class
 /// - Rename target file
+/// @todo: replace target name in other targets
 pub fn generate_target_changeset(
     old_name: &str,
     new_name: &str,

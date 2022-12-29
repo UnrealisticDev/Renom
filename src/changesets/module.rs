@@ -12,6 +12,9 @@ use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
 /// following changes:
 /// - Rename target class
 /// - Rename target file
+///
+/// @todo: port API references here to be per module
+/// @todo: replace module name in other modules
 pub fn generate_module_changeset(
     old_name: &str,
     new_name: &str,
@@ -68,7 +71,14 @@ fn find_mod_implementation(project_root: &Path, old_name: &str) -> Option<PathBu
         .map(|entry| entry.path().to_owned())
         .filter(|path| path.is_file() && path.extension().map_or(false, |ext| ext == "cpp"))
         .find(|source_file| match fs::read_to_string(source_file) {
-            Ok(content) => content.contains("_MODULE"),
+            Ok(content) => {
+                let contains = content.contains("_MODULE");
+                println!(
+                    "Source {:?} contains implementation: {}",
+                    source_file, contains
+                );
+                contains
+            }
             Err(_) => false,
         })
 }
@@ -85,7 +95,7 @@ fn update_mod_implementation(
     let new_impl = old_impl.replace(old_name, new_name);
     changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
         implementation_file,
-        old_impl,
+        old_impl.replace('(', r#"\("#).replace(')', r#"\)"#),
         new_impl,
     )))
 }
