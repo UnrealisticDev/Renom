@@ -9,9 +9,9 @@ use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
 /// following changes:
 /// - Rename target class
 /// - Rename target file
-/// @todo: do a better job of finding module header (or skip)
-/// @todo: do a better job of finding module source (or skip)
-/// @todo: do a better job of finding module definition
+/// @todo: do a better job of finding module implementation
+/// cannot assume it will be at the top level, so search for it
+/// based on text
 pub fn generate_module_changeset(
     old_name: &str,
     new_name: &str,
@@ -23,10 +23,12 @@ pub fn generate_module_changeset(
     let mut changeset = vec![
         rename_build_class(project_root, old_name, new_name),
         rename_build_file(project_root, old_name, new_name),
-        rename_definition(project_root, old_name, new_name),
-        rename_header_file(project_root, old_name, new_name),
-        rename_source_file(project_root, old_name, new_name),
+        rename_implementation(project_root, old_name, new_name),
     ];
+
+    // walkdir
+    // look at all cpp files
+    // search for IMPLEMENT_{something_}?MODULE(<impl>, ..., capture so I can do it right)
 
     changeset.extend(
         api_reference_files.iter().map(|header| {
@@ -125,26 +127,7 @@ fn rename_build_class(
     ))
 }
 
-fn rename_header_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("h"),
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(new_project_name)
-            .with_extension("h"),
-    ))
-}
-
-fn rename_definition(
+fn rename_implementation(
     project_root: &Path,
     old_project_name: &str,
     new_project_name: &str,
@@ -157,25 +140,6 @@ fn rename_definition(
             .with_extension("cpp"),
         old_project_name,
         new_project_name,
-    ))
-}
-
-fn rename_source_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("cpp"),
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(new_project_name)
-            .with_extension("cpp"),
     ))
 }
 
