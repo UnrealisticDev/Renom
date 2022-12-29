@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::changes::{Change, RenameFile, ReplaceInFile};
+use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
 
 /// Generate a changeset to rename a build file. This includes the
 /// following changes:
@@ -53,7 +53,15 @@ pub fn generate_module_changeset(
         new_name,
     ));
 
-    // @todo: add module redirect
+    changeset.push(Change::AppendIniEntry(AppendIniEntry::new(
+        project_root.join("Config").join("DefaultEngine.ini"),
+        "CoreRedirects",
+        "+PackageRedirects",
+        format!(
+            r#"(OldName="/Script/{}",NewName="/Script/{}")"#,
+            old_name, new_name
+        ),
+    )));
 
     changeset
 }
