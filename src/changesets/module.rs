@@ -27,7 +27,7 @@ pub fn generate_module_changeset(
     ];
 
     if let Some(implementation_file) = find_mod_implementation(project_root, old_name) {
-        update_mod_implementation(&mut changeset, implementation_file, old_name, new_name);
+        update_mod_implementation(&mut changeset, implementation_file, new_name);
     }
 
     changeset.extend(
@@ -78,19 +78,25 @@ fn find_mod_implementation(project_root: &Path, old_name: &str) -> Option<PathBu
 fn update_mod_implementation(
     changeset: &mut Vec<Change>,
     implementation_file: PathBuf,
-    old_name: &str,
     new_name: &str,
 ) {
     let content = fs::read_to_string(&implementation_file).unwrap();
-    let regex = Regex::new(r#"_MODULE\(.+\)"#).unwrap();
-    let old_impl = regex.find(&content).map(|mat| mat.as_str()).unwrap();
-    let new_impl = old_impl
-        .replace(&format!(r#""{}""#, old_name), &format!(r#""{}""#, new_name))
-        .replace(&format!("{},", old_name), &format!("{},", new_name));
+    let regex =
+        Regex::new(r#"(?P<macro>IMPLEMENT_(GAME_|PRIMARY_GAME_)?MODULE)\((?P<impl>.+?),"#).unwrap();
+    let captures = regex.captures(&content).unwrap();
+    let macr = captures.name("macro").unwrap().as_str();
+    let implementation = captures.name("impl").unwrap().as_str();
     changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
         implementation_file,
-        old_impl.replace('(', r#"\("#).replace(')', r#"\)"#),
-        new_impl,
+        r#"_MODULE\(.+\)"#,
+        if macr == "IMPLEMENT_PRIMARY_GAME_MODULE" {
+            format!(
+                r#"_MODULE({}, {}, "{}")"#,
+                implementation, new_name, new_name
+            )
+        } else {
+            format!(r#"_MODULE({}, {})"#, implementation, new_name)
+        },
     )))
 }
 
