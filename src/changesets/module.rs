@@ -26,7 +26,6 @@ pub fn generate_module_changeset(
         rename_build_file(project_root, old_name, new_name),
     ];
 
-    // @todo: refine the replace
     if let Some(implementation_file) = find_mod_implementation(project_root, old_name) {
         update_mod_implementation(&mut changeset, implementation_file, old_name, new_name);
     }
@@ -85,7 +84,9 @@ fn update_mod_implementation(
     let content = fs::read_to_string(&implementation_file).unwrap();
     let regex = Regex::new(r#"_MODULE\(.+\)"#).unwrap();
     let old_impl = regex.find(&content).map(|mat| mat.as_str()).unwrap();
-    let new_impl = old_impl.replace(old_name, new_name);
+    let new_impl = old_impl
+        .replace(&format!(r#""{}""#, old_name), &format!(r#""{}""#, new_name))
+        .replace(&format!("{},", old_name), &format!("{},", new_name));
     changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
         implementation_file,
         old_impl.replace('(', r#"\("#).replace(')', r#"\)"#),
