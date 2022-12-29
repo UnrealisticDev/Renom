@@ -1,6 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    io::stdin,
+    path::{Path, PathBuf},
+};
 
-use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry};
+use crate::{
+    changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
+    presentation::log,
+};
+
+use super::generate_target_changeset;
 
 /// Generate a changeset to rename a code project from the
 /// old project name to the new project name. This includes the
@@ -34,13 +43,25 @@ pub fn generate_code_changeset(
     changeset.extend(vec![
         replace_in_project_descriptor(project_root, old_project_name, new_project_name),
         rename_project_descriptor(project_root, old_project_name, new_project_name),
-        replace_in_exec_target_file(project_root, old_project_name, new_project_name),
-        rename_exec_target_file(project_root, old_project_name, new_project_name),
-        replace_in_ed_target_file(project_root, old_project_name, new_project_name),
-        rename_ed_target_file(project_root, old_project_name, new_project_name),
         replace_in_mod_build_file(project_root, old_project_name, new_project_name),
         rename_mod_build_file(project_root, old_project_name, new_project_name),
     ]);
+
+    // @todo: introduce opt-out mechanism
+    // do not need to rename all targets
+    // @todo: surface read errors
+    find_target_file_names(project_root)
+        .iter()
+        .for_each(|old_target_name| {
+            log::basic(format!("Found project target named {}.", old_target_name));
+            log::prompt("Target final name");
+            let new_target_name = request_final_target_name();
+            changeset.extend(generate_target_changeset(
+                old_target_name,
+                &new_target_name,
+                project_root,
+            ))
+        });
 
     changeset.extend(api_reference_files.iter().map(|header| {
         replace_api_macro_in_header_file(project_root, header, old_project_name, new_project_name)
@@ -59,6 +80,29 @@ pub fn generate_code_changeset(
     ]);
 
     changeset
+}
+
+fn request_final_target_name() -> String {
+    let mut buffer = String::new();
+    stdin()
+        .read_line(&mut buffer)
+        .map(|_| String::from(buffer.trim()))
+        .map_err(|err| err.to_string())
+        .unwrap()
+}
+
+fn find_target_file_names(project_root: &Path) -> Vec<String> {
+    fs::read_dir(project_root.join("Source"))
+        .expect("could not read source dir")
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .and_then(|filename| filename.strip_suffix(".Target.cs"))
+                .map(|filename| filename.to_string())
+        })
+        .collect()
 }
 
 fn replace_in_project_descriptor(
@@ -87,70 +131,6 @@ fn rename_project_descriptor(
         project_root
             .join(new_project_name)
             .with_extension("uproject"),
-    ))
-}
-
-fn replace_in_exec_target_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .with_extension("Target.cs"),
-        old_project_name,
-        new_project_name,
-    ))
-}
-
-fn rename_exec_target_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .with_extension("Target.cs"),
-        project_root
-            .join("Source")
-            .join(new_project_name)
-            .with_extension("Target.cs"),
-    ))
-}
-
-fn replace_in_ed_target_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join("Source")
-            .join(format!("{}Editor", old_project_name))
-            .with_extension("Target.cs"),
-        old_project_name,
-        new_project_name,
-    ))
-}
-
-fn rename_ed_target_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(format!("{}Editor", old_project_name))
-            .with_extension("Target.cs"),
-        project_root
-            .join("Source")
-            .join(format!("{}Editor", new_project_name))
-            .with_extension("Target.cs"),
     ))
 }
 
