@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use crate::changes::{Change, RenameFile, ReplaceInFile};
 
@@ -31,11 +34,28 @@ pub fn generate_module_changeset(
     );
 
     changeset.push(rename_source_subfolder(project_root, old_name, new_name));
-    // @todo: mod references in targets
+
+    find_target_file_names(project_root)
+        .iter()
+        .for_each(|target_name| {
+            let target = project_root
+                .join("Source")
+                .join(target_name)
+                .with_extension("Target.cs");
+            changeset.push(replace_mod_reference_in_target(&target, old_name, new_name))
+        });
     // @todo: mod references in project descriptor
     // @todo: add redirects
 
     changeset
+}
+
+fn replace_mod_reference_in_target(target: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        target,
+        format!(r#""{}""#, old_name),
+        format!(r#""{}""#, new_name),
+    ))
 }
 
 fn rename_build_file(
@@ -149,4 +169,18 @@ fn rename_source_subfolder(
         project_root.join("Source").join(old_project_name),
         project_root.join("Source").join(new_project_name),
     ))
+}
+
+fn find_target_file_names(project_root: &Path) -> Vec<String> {
+    fs::read_dir(project_root.join("Source"))
+        .expect("could not read source dir")
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .and_then(|filename| filename.strip_suffix(".Target.cs"))
+                .map(|filename| filename.to_string())
+        })
+        .collect()
 }
