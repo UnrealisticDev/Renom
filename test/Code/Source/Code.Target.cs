@@ -3,12 +3,12 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class TestEngineVersion4Target : TargetRules
+public class CodeTarget : TargetRules
 {
-	public TestEngineVersion4Target( TargetInfo Target) : base(Target)
+	public CodeTarget( TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
-		ExtraModuleNames.AddRange( new string[] { "TestEngineVersion4" } );
+		ExtraModuleNames.AddRange( new string[] { "Code" } );
 	}
 }

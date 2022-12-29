@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "TestEngineVersion4",
+			"Name": "Code",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
