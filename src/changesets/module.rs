@@ -53,7 +53,25 @@ pub fn generate_module_changeset(
         new_name,
     ));
 
-    changeset.push(Change::AppendIniEntry(AppendIniEntry::new(
+    changeset.push(update_existing_redirects(project_root, old_name, new_name));
+    changeset.push(append_mod_redirect(project_root, old_name, new_name));
+
+    changeset
+}
+
+fn update_existing_redirects(project_root: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        project_root.join("Config").join("DefaultEngine.ini"),
+        format!(
+            r#"\(OldName="(?P<old>.+?)",\s*NewName="/Script/{}"\)"#,
+            old_name
+        ),
+        format!(r#"(OldName="$old", NewName="/Script/{}")"#, new_name),
+    ))
+}
+
+fn append_mod_redirect(project_root: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::AppendIniEntry(AppendIniEntry::new(
         project_root.join("Config").join("DefaultEngine.ini"),
         "CoreRedirects",
         "+PackageRedirects",
@@ -61,9 +79,7 @@ pub fn generate_module_changeset(
             r#"(OldName="/Script/{}",NewName="/Script/{}")"#,
             old_name, new_name
         ),
-    )));
-
-    changeset
+    ))
 }
 
 fn replace_mod_reference_in_target(target: &Path, old_name: &str, new_name: &str) -> Change {
