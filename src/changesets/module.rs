@@ -16,6 +16,7 @@ pub fn generate_module_changeset(
     old_name: &str,
     new_name: &str,
     project_root: impl AsRef<Path>,
+    project_name: &str,
     api_reference_files: &[PathBuf],
 ) -> Vec<Change> {
     let project_root = project_root.as_ref();
@@ -44,8 +45,15 @@ pub fn generate_module_changeset(
                 .with_extension("Target.cs");
             changeset.push(replace_mod_reference_in_target(&target, old_name, new_name))
         });
-    // @todo: mod references in project descriptor
-    // @todo: add redirects
+
+    changeset.push(replace_mod_reference_in_project_descriptor(
+        project_root,
+        project_name,
+        old_name,
+        new_name,
+    ));
+
+    // @todo: add module redirect
 
     changeset
 }
@@ -183,4 +191,17 @@ fn find_target_file_names(project_root: &Path) -> Vec<String> {
                 .map(|filename| filename.to_string())
         })
         .collect()
+}
+
+fn replace_mod_reference_in_project_descriptor(
+    project_root: &Path,
+    project_name: &str,
+    old_name: &str,
+    new_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        project_root.join(project_name).with_extension("uproject"),
+        format!(r#""{}""#, old_name),
+        format!(r#""{}""#, new_name),
+    ))
 }

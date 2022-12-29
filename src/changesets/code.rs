@@ -40,11 +40,6 @@ pub fn generate_code_changeset(
     let project_root = project_root.as_ref();
     let mut changeset = vec![];
 
-    changeset.extend(vec![
-        replace_in_project_descriptor(project_root, old_project_name, new_project_name),
-        rename_project_descriptor(project_root, old_project_name, new_project_name),
-    ]);
-
     // do modules first, we can avoid having to
     // track changes that might happen to target files
     // @todo: introduce opt-out mechanism
@@ -59,6 +54,7 @@ pub fn generate_code_changeset(
                 old_module_name,
                 &new_module_name,
                 project_root,
+                old_project_name,
                 &api_reference_files,
             ))
         });
@@ -84,6 +80,8 @@ pub fn generate_code_changeset(
         append_redirect_to_engine_config(project_root, old_project_name, new_project_name),
         add_game_name_to_engine_config(project_root, new_project_name),
         add_project_name_to_game_config(project_root, new_project_name),
+        replace_in_project_descriptor(project_root, old_project_name, new_project_name),
+        rename_project_descriptor(project_root, old_project_name, new_project_name),
         rename_project_root(project_root, new_project_name),
     ]);
 
