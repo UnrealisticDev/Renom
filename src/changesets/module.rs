@@ -3,15 +3,15 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use regex::Regex;
+use walkdir::WalkDir;
+
 use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
 
 /// Generate a changeset to rename a build file. This includes the
 /// following changes:
 /// - Rename target class
 /// - Rename target file
-/// @todo: do a better job of finding module implementation
-/// cannot assume it will be at the top level, so search for it
-/// based on text
 pub fn generate_module_changeset(
     old_name: &str,
     new_name: &str,
@@ -23,12 +23,12 @@ pub fn generate_module_changeset(
     let mut changeset = vec![
         rename_build_class(project_root, old_name, new_name),
         rename_build_file(project_root, old_name, new_name),
-        rename_implementation(project_root, old_name, new_name),
     ];
 
-    // walkdir
-    // look at all cpp files
-    // search for IMPLEMENT_{something_}?MODULE(<impl>, ..., capture so I can do it right)
+    // @todo: refine the replace
+    if let Some(implementation_file) = find_mod_implementation(project_root, old_name) {
+        update_mod_implementation(&mut changeset, implementation_file, old_name, new_name);
+    }
 
     changeset.extend(
         api_reference_files.iter().map(|header| {
@@ -59,6 +59,35 @@ pub fn generate_module_changeset(
     changeset.push(append_mod_redirect(project_root, old_name, new_name));
 
     changeset
+}
+
+fn find_mod_implementation(project_root: &Path, old_name: &str) -> Option<PathBuf> {
+    WalkDir::new(project_root.join("Source").join(old_name))
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path().to_owned())
+        .filter(|path| path.is_file() && path.extension().map_or(false, |ext| ext == "cpp"))
+        .find(|source_file| match fs::read_to_string(source_file) {
+            Ok(content) => content.contains("_MODULE"),
+            Err(_) => false,
+        })
+}
+
+fn update_mod_implementation(
+    changeset: &mut Vec<Change>,
+    implementation_file: PathBuf,
+    old_name: &str,
+    new_name: &str,
+) {
+    let content = fs::read_to_string(&implementation_file).unwrap();
+    let regex = Regex::new(r#"_MODULE\(.+\)"#).unwrap();
+    let old_impl = regex.find(&content).map(|mat| mat.as_str()).unwrap();
+    let new_impl = old_impl.replace(old_name, new_name);
+    changeset.push(Change::ReplaceInFile(ReplaceInFile::new(
+        implementation_file,
+        old_impl,
+        new_impl,
+    )))
 }
 
 fn update_existing_redirects(project_root: &Path, old_name: &str, new_name: &str) -> Change {
@@ -122,22 +151,6 @@ fn rename_build_class(
             .join(old_project_name)
             .join(old_project_name)
             .with_extension("Build.cs"),
-        old_project_name,
-        new_project_name,
-    ))
-}
-
-fn rename_implementation(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("cpp"),
         old_project_name,
         new_project_name,
     ))
