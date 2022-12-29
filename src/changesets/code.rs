@@ -9,7 +9,7 @@ use crate::{
     presentation::log,
 };
 
-use super::generate_target_changeset;
+use super::{generate_module_changeset, generate_target_changeset};
 
 /// Generate a changeset to rename a code project from the
 /// old project name to the new project name. This includes the
@@ -43,9 +43,25 @@ pub fn generate_code_changeset(
     changeset.extend(vec![
         replace_in_project_descriptor(project_root, old_project_name, new_project_name),
         rename_project_descriptor(project_root, old_project_name, new_project_name),
-        replace_in_mod_build_file(project_root, old_project_name, new_project_name),
-        rename_mod_build_file(project_root, old_project_name, new_project_name),
     ]);
+
+    // do modules first, we can avoid having to
+    // track changes that might happen to target files
+    // @todo: introduce opt-out mechanism
+    // do not need to rename all modules
+    find_module_names(project_root)
+        .iter()
+        .for_each(|old_module_name| {
+            log::basic(format!("Found project module named {}.", old_module_name));
+            log::prompt("Target module name");
+            let new_module_name = request_final_module_name();
+            changeset.extend(generate_module_changeset(
+                old_module_name,
+                &new_module_name,
+                project_root,
+                &api_reference_files,
+            ))
+        });
 
     // @todo: introduce opt-out mechanism
     // do not need to rename all targets
@@ -63,15 +79,7 @@ pub fn generate_code_changeset(
             ))
         });
 
-    changeset.extend(api_reference_files.iter().map(|header| {
-        replace_api_macro_in_header_file(project_root, header, old_project_name, new_project_name)
-    }));
-
     changeset.extend(vec![
-        rename_mod_header_file(project_root, old_project_name, new_project_name),
-        replace_in_mod_source_file(project_root, old_project_name, new_project_name),
-        rename_mod_source_file(project_root, old_project_name, new_project_name),
-        rename_source_subfolder(project_root, old_project_name, new_project_name),
         update_redirects_in_engine_config(project_root, new_project_name),
         append_redirect_to_engine_config(project_root, old_project_name, new_project_name),
         add_game_name_to_engine_config(project_root, new_project_name),
@@ -83,6 +91,29 @@ pub fn generate_code_changeset(
 }
 
 fn request_final_target_name() -> String {
+    let mut buffer = String::new();
+    stdin()
+        .read_line(&mut buffer)
+        .map(|_| String::from(buffer.trim()))
+        .map_err(|err| err.to_string())
+        .unwrap()
+}
+
+fn find_module_names(project_root: &Path) -> Vec<String> {
+    fs::read_dir(project_root.join("Source"))
+        .expect("could not read source dir")
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| entry.path().is_dir())
+        .filter_map(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .map(|filename| filename.to_owned())
+        })
+        .collect()
+}
+
+fn request_final_module_name() -> String {
     let mut buffer = String::new();
     stdin()
         .read_line(&mut buffer)
@@ -131,119 +162,6 @@ fn rename_project_descriptor(
         project_root
             .join(new_project_name)
             .with_extension("uproject"),
-    ))
-}
-
-fn replace_in_mod_build_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("Build.cs"),
-        old_project_name,
-        new_project_name,
-    ))
-}
-
-fn rename_mod_build_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("Build.cs"),
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(new_project_name)
-            .with_extension("Build.cs"),
-    ))
-}
-
-fn replace_api_macro_in_header_file(
-    project_root: &Path,
-    header: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root.join(header),
-        format!("{}_API", old_project_name.to_uppercase()),
-        format!("{}_API", new_project_name.to_uppercase()),
-    ))
-}
-
-fn rename_mod_header_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("h"),
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(new_project_name)
-            .with_extension("h"),
-    ))
-}
-
-fn replace_in_mod_source_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("cpp"),
-        old_project_name,
-        new_project_name,
-    ))
-}
-
-fn rename_mod_source_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("cpp"),
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(new_project_name)
-            .with_extension("cpp"),
-    ))
-}
-
-fn rename_source_subfolder(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::RenameFile(RenameFile::new(
-        project_root.join("Source").join(old_project_name),
-        project_root.join("Source").join(new_project_name),
     ))
 }
 
