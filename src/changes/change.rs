@@ -99,10 +99,10 @@ impl Change {
 impl Display for Change {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &*self {
-            Change::RenameFile(p) => write!(f, "{}", &p),
-            Change::ReplaceInFile(p) => write!(f, "{}", &p),
-            Change::SetIniEntry(p) => write!(f, "{}", &p),
-            Change::AppendIniEntry(p) => write!(f, "{}", &p),
+            Change::RenameFile(params) => write!(f, "{}", &params),
+            Change::ReplaceInFile(params) => write!(f, "{}", &params),
+            Change::SetIniEntry(params) => write!(f, "{}", &params),
+            Change::AppendIniEntry(params) => write!(f, "{}", &params),
         }
     }
 }
