@@ -1,8 +1,4 @@
-use std::{
-    fs,
-    io::stdin,
-    path::{Path, PathBuf},
-};
+use std::{fs, io::stdin, path::Path};
 
 use crate::{
     changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
@@ -215,8 +211,6 @@ fn rename_project_root(project_root: &Path, new_project_name: &str) -> Change {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use crate::changes::*;
 
     use super::generate_code_changeset;
