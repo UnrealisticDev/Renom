@@ -21,13 +21,16 @@ macro_rules! ok_or_quit {
 }
 
 pub fn start_interactive_dialogue() {
-    log::check_support_for_colors();
+    set_up_terminal();
     log::header("Welcome to Renom");
-
     match ok_or_quit!(request_workflow_selection_from_user()) {
         Workflow::RenameProject => ok_or_quit!(start_rename_project_workflow()),
         Workflow::RenameModule => ok_or_quit!(start_rename_module_workflow()),
     };
+}
+
+fn set_up_terminal() {
+    log::check_support_for_colors();
 }
 
 fn request_workflow_selection_from_user() -> Result<Workflow, String> {
