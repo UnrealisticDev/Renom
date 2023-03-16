@@ -146,9 +146,24 @@ fn get_target_module_from_user(project_modules: &[String]) -> Result<String, Str
 fn get_target_name_from_user(project_modules: &[String]) -> Result<String, String> {
     let project_modules = project_modules.to_vec();
     Text::new("Provide a new name for the module:")
+        .with_validator(validate_target_name_is_concise)
         .with_validator(move |input: &str| validate_target_name_is_unique(input, &project_modules))
         .prompt()
         .map_err(|err| err.to_string())
+}
+
+fn validate_target_name_is_concise(target_name: &str) -> Result<Validation, CustomUserError> {
+    let target_name_max_len = 30;
+    match target_name.len() <= target_name_max_len {
+        true => Ok(Validation::Valid),
+        false => {
+            let error_message = format!(
+                "Target name must not be longer than {} characters",
+                target_name_max_len
+            );
+            Ok(Validation::Invalid(error_message.into()))
+        }
+    }
 }
 
 fn validate_target_name_is_unique(
