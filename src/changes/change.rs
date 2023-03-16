@@ -29,62 +29,78 @@ impl Change {
     }
 
     fn rename_file(params: &RenameFile) -> io::Result<Revert> {
-        let before = params.from.clone();
-        let after = params.to.clone();
-        std::fs::rename(&params.from, &params.to)?;
+        let from = params.from.clone();
+        let to = params.to.clone();
+        std::fs::rename(&from, &to)?;
 
-        Ok(Box::new(move || std::fs::rename(&after, &before)))
+        Ok(Box::new(move || std::fs::rename(&to, &from)))
     }
 
     fn replace_in_file(params: &ReplaceInFile, backup_dir: &Path) -> io::Result<Revert> {
-        let before = Change::backup_file(&params.path, backup_dir)?;
-        let after = params.path.clone();
-        let content = std::fs::read_to_string(&params.path)?;
-        let regex = Regex::new(&params.from).expect("invalid regex; coding error"); // Should panic; regex is hard-coded
+        let backup = Change::backup_file(&params.path, backup_dir)?;
+        let target = params.path.clone();
+        let content = std::fs::read_to_string(&target)?;
+        let regex = Regex::new(&params.from).expect("regex should be valid");
         let content_after_replace = regex.replace_all(&content, params.to.as_str()).to_string();
-        std::fs::write(&params.path, &content_after_replace)?;
+        std::fs::write(&target, &content_after_replace)?;
 
-        Ok(Box::new(move || std::fs::copy(&before, &after).map(|_| ())))
+        Ok(Box::new(move || {
+            std::fs::copy(&backup, &target).map(|_| ())
+        }))
     }
 
     fn set_ini_entry(params: &SetIniEntry, backup_dir: &Path) -> io::Result<Revert> {
-        let before = Change::backup_file(&params.path, backup_dir)?;
-        let after = params.path.clone();
+        let SetIniEntry {
+            section,
+            key,
+            value,
+            path,
+        } = params;
 
-        let mut ini = match Ini::load_from_file(&params.path) {
+        let backup = Change::backup_file(path, backup_dir)?;
+        let target = path.clone();
+
+        let mut ini = match Ini::load_from_file(&target) {
             Ok(ini) => ini,
             Err(err) => match err {
                 ini::ini::Error::Io(io) => return Err(io),
                 ini::ini::Error::Parse(p) => return Err(io::Error::new(io::ErrorKind::Other, p)),
             },
         };
-        ini.with_section(Some(&params.section))
-            .set(&params.key, &params.value);
-        ini.write_to_file(&params.path)?;
+        ini.with_section(Some(section)).set(key, value);
+        ini.write_to_file(&target)?;
 
-        Ok(Box::new(move || std::fs::copy(&before, &after).map(|_| ())))
+        Ok(Box::new(move || {
+            std::fs::copy(&backup, &target).map(|_| ())
+        }))
     }
 
     fn append_ini_entry(params: &AppendIniEntry, backup_dir: &Path) -> io::Result<Revert> {
-        let before = Change::backup_file(&params.path, backup_dir)?;
-        let after = params.path.clone();
+        let AppendIniEntry {
+            section,
+            key,
+            value,
+            path,
+        } = params;
 
-        let mut ini = match Ini::load_from_file(&params.path) {
+        let backup = Change::backup_file(path, backup_dir)?;
+        let target = path.clone();
+
+        let mut ini = match Ini::load_from_file(&target) {
             Ok(ini) => ini,
             Err(err) => match err {
                 ini::ini::Error::Io(io) => return Err(io),
                 ini::ini::Error::Parse(p) => return Err(io::Error::new(io::ErrorKind::Other, p)),
             },
         };
-        ini.with_section(Some(&params.section))
-            .set("dummy", "dummy");
-        ini.section_mut(Some(&params.section))
-            .expect("ini section missing after create") // Should panic; section created right above
-            .append(&params.key, &params.value);
-        ini.with_section(Some(&params.section)).delete(&"dummy");
+        ini.with_section(Some(section)).set("dummy", "dummy"); // create if does not exist
+        ini.section_mut(Some(section)).unwrap().append(key, value);
+        ini.with_section(Some(section)).delete(&"dummy");
         ini.write_to_file(&params.path)?;
 
-        Ok(Box::new(move || std::fs::copy(&before, &after).map(|_| ())))
+        Ok(Box::new(move || {
+            std::fs::copy(&backup, &target).map(|_| ())
+        }))
     }
 
     fn backup_file(file: &Path, backup_dir: &Path) -> io::Result<PathBuf> {
