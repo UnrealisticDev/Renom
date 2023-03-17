@@ -47,6 +47,7 @@ pub fn generate_code_changeset(
             let new_module_name = request_final_module_name();
             changeset.extend(generate_module_changeset(
                 old_module_name,
+                project_root.join("Source").join(old_module_name),
                 &new_module_name,
                 project_root,
                 old_project_name,

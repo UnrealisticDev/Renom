@@ -16,29 +16,29 @@ use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
 /// @todo: replace module name in other modules
 pub fn generate_module_changeset(
     old_name: &str,
+    mod_root: impl AsRef<Path>,
     new_name: &str,
     project_root: impl AsRef<Path>,
     project_name: &str,
 ) -> Vec<Change> {
     let project_root = project_root.as_ref();
+    let mod_root = mod_root.as_ref();
     let mut changeset = vec![
-        rename_build_class(project_root, old_name, new_name),
-        rename_build_file(project_root, old_name, new_name),
+        rename_build_class(mod_root, old_name, new_name),
+        rename_build_file(mod_root, old_name, new_name),
     ];
 
-    if let Some(implementation_file) = find_mod_implementation(project_root, old_name) {
+    if let Some(implementation_file) = find_mod_implementation(mod_root) {
         update_mod_implementation(&mut changeset, implementation_file, new_name);
     }
 
     changeset.extend(
-        get_files_including_api_macro(project_root, old_name)
+        get_files_including_api_macro(mod_root, old_name)
             .iter()
-            .map(|header| {
-                replace_api_macro_in_header_file(project_root, header, old_name, new_name)
-            }),
+            .map(|header| replace_api_macro_in_header_file(mod_root, header, old_name, new_name)),
     );
 
-    changeset.push(rename_source_subfolder(project_root, old_name, new_name));
+    changeset.push(rename_source_subfolder(mod_root, new_name));
 
     find_target_file_names(project_root)
         .iter()
@@ -63,8 +63,8 @@ pub fn generate_module_changeset(
     changeset
 }
 
-fn find_mod_implementation(project_root: &Path, old_name: &str) -> Option<PathBuf> {
-    WalkDir::new(project_root.join("Source").join(old_name))
+fn find_mod_implementation(mod_root: &Path) -> Option<PathBuf> {
+    WalkDir::new(mod_root)
         .into_iter()
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path().to_owned())
@@ -131,43 +131,23 @@ fn replace_mod_reference_in_target(target: &Path, old_name: &str, new_name: &str
     ))
 }
 
-fn rename_build_file(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
+fn rename_build_file(mod_root: &Path, old_project_name: &str, new_project_name: &str) -> Change {
     Change::RenameFile(RenameFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("Build.cs"),
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(new_project_name)
-            .with_extension("Build.cs"),
+        mod_root.join(old_project_name).with_extension("Build.cs"),
+        mod_root.join(new_project_name).with_extension("Build.cs"),
     ))
 }
 
-fn rename_build_class(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
+fn rename_build_class(mod_root: &Path, old_project_name: &str, new_project_name: &str) -> Change {
     Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join("Source")
-            .join(old_project_name)
-            .join(old_project_name)
-            .with_extension("Build.cs"),
+        mod_root.join(old_project_name).with_extension("Build.cs"),
         old_project_name,
         new_project_name,
     ))
 }
 
-fn get_files_including_api_macro(project_root: &Path, mod_name: &str) -> Vec<PathBuf> {
-    let files: Vec<PathBuf> = WalkDir::new(project_root.join("Source").join(mod_name))
+fn get_files_including_api_macro(mod_root: &Path, mod_name: &str) -> Vec<PathBuf> {
+    let files: Vec<PathBuf> = WalkDir::new(mod_root)
         .into_iter()
         .filter_map(|entry| entry.ok())
         .map(|entry| entry.path().to_owned())
@@ -178,37 +158,29 @@ fn get_files_including_api_macro(project_root: &Path, mod_name: &str) -> Vec<Pat
                     .unwrap()
                     .contains(&format!("{}_API", mod_name.to_uppercase()))
         })
-        .filter_map(|path| {
-            path.strip_prefix(project_root)
-                .map(|path| path.to_owned())
-                .ok()
-        })
+        .filter_map(|path| path.strip_prefix(mod_root).map(|path| path.to_owned()).ok())
         .collect();
 
     files
 }
 
 fn replace_api_macro_in_header_file(
-    project_root: &Path,
+    mod_root: &Path,
     header: &Path,
     old_project_name: &str,
     new_project_name: &str,
 ) -> Change {
     Change::ReplaceInFile(ReplaceInFile::new(
-        project_root.join(header),
+        mod_root.join(header),
         format!("{}_API", old_project_name.to_uppercase()),
         format!("{}_API", new_project_name.to_uppercase()),
     ))
 }
 
-fn rename_source_subfolder(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
+fn rename_source_subfolder(mod_root: &Path, new_project_name: &str) -> Change {
     Change::RenameFile(RenameFile::new(
-        project_root.join("Source").join(old_project_name),
-        project_root.join("Source").join(new_project_name),
+        mod_root,
+        mod_root.with_file_name(new_project_name),
     ))
 }
 

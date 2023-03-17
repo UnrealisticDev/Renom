@@ -1,21 +1,28 @@
-use std::{ffi::OsStr, fs, path::PathBuf};
+use std::{
+    ffi::OsStr,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use inquire::{validator::Validation, CustomUserError, Select, Text};
+use regex::Regex;
+use walkdir::WalkDir;
 
-use crate::{changesets::generate_module_changeset, engine::Engine};
+use crate::{changesets::generate_module_changeset, engine::Engine, unreal::Module};
 
 struct RenameModuleContext {
     project_root: PathBuf,
     project_name: String,
-    project_modules: Vec<String>,
-    target_module: String,
+    project_modules: Vec<Module>,
+    target_module: Module,
     target_name: String,
 }
 
 pub fn start_rename_module_workflow() -> Result<(), String> {
     let context = gather_context()?;
     let changeset = generate_module_changeset(
-        &context.target_module,
+        &context.target_module.name,
+        &context.target_module.root,
         &context.target_name,
         &context.project_root,
         &context.project_name,
@@ -116,39 +123,49 @@ fn detect_project_name(project_root: &PathBuf) -> Result<String, String> {
 }
 
 /// Detect all project modules in a project given the path to the project root
-/// directory. Assumes that the Source folder exists. Returns an error in case
-/// of I/O issues.
-fn detect_project_modules(project_root: &PathBuf) -> Result<Vec<String>, String> {
+/// directory. Detects top-level modules and nested modules. Assumes that the
+/// Source folder exists. Returns an error in case of I/O issues.
+fn detect_project_modules(project_root: &PathBuf) -> Result<Vec<Module>, String> {
     let source_dir = project_root.join("Source");
     assert!(source_dir.is_dir());
-
-    Ok(fs::read_dir(source_dir)
-        .map_err(|err| err.to_string())?
+    Ok(WalkDir::new(source_dir)
+        .into_iter()
         .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_dir())
-        .filter(|entry| {
-            entry
-                .path()
-                .join(entry.path().file_name().expect("filename should exist"))
-                .with_extension("Build.cs")
-                .is_file()
+        .filter(|entry| entry.path().is_dir() && dir_contains_module_descriptor(entry.path()))
+        .map(|entry| Module {
+            root: entry.path().to_owned(),
+            name: get_dir_name(&entry.path()),
         })
-        .filter_map(|entry| entry.file_name().to_str().map(str::to_owned))
         .collect())
 }
 
-fn get_target_module_from_user(project_modules: &[String]) -> Result<String, String> {
+fn dir_contains_module_descriptor(dir: &Path) -> bool {
+    assert!(dir.is_dir());
+    let dir_name = dir.file_name().expect("directory name should exist");
+    dir.join(dir_name).with_extension("Build.cs").is_file()
+}
+
+fn get_dir_name(dir: &Path) -> String {
+    dir.file_name()
+        .expect("directory name should exist")
+        .to_str()
+        .expect("name should be valid Unicode")
+        .to_string()
+}
+
+fn get_target_module_from_user(project_modules: &[Module]) -> Result<Module, String> {
     Select::new("Choose a module:", project_modules.to_vec())
         .prompt()
         .map_err(|err| err.to_string())
 }
 
-fn get_target_name_from_user(project_modules: &[String]) -> Result<String, String> {
+fn get_target_name_from_user(project_modules: &[Module]) -> Result<String, String> {
     let project_modules = project_modules.to_vec();
     Text::new("Provide a new name for the module:")
         .with_validator(validate_target_name_is_not_empty)
         .with_validator(validate_target_name_is_concise)
         .with_validator(move |input: &str| validate_target_name_is_unique(input, &project_modules))
+        .with_validator(validate_target_name_is_valid_identifier)
         .prompt()
         .map_err(|err| err.to_string())
 }
@@ -179,12 +196,29 @@ fn validate_target_name_is_concise(target_name: &str) -> Result<Validation, Cust
 
 fn validate_target_name_is_unique(
     target_name: &str,
-    project_modules: &[String],
+    project_modules: &[Module],
 ) -> Result<Validation, CustomUserError> {
-    match project_modules.iter().all(|module| module != target_name) {
+    match project_modules
+        .iter()
+        .all(|module| module.name != target_name)
+    {
         true => Ok(Validation::Valid),
         false => {
             let error_message = "Target name must not conflict with another module";
+            Ok(Validation::Invalid(error_message.into()))
+        }
+    }
+}
+
+fn validate_target_name_is_valid_identifier(
+    target_name: &str,
+) -> Result<Validation, CustomUserError> {
+    let identifier_regex = Regex::new("^[_[[:alnum:]]]*$").expect("regex should be valid");
+    match identifier_regex.is_match(target_name) {
+        true => Ok(Validation::Valid),
+        false => {
+            let error_message =
+                "Target name must be comprised of alphanumeric characters and underscores only";
             Ok(Validation::Invalid(error_message.into()))
         }
     }
