@@ -46,6 +46,11 @@ pub mod log {
         stdout().flush().unwrap();
     }
 
+    /// Print a success message.
+    pub fn success<S: AsRef<str>>(text: S) {
+        println!("\n\t[ Success ]\n\t{}\n", text.as_ref().bright_green());
+    }
+
     /// Print an error.
     pub fn error<S: AsRef<str>>(text: S) {
         println!("\n\t[ Error ]\n\t{}\n", text.as_ref().red());

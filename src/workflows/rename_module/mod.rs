@@ -29,8 +29,10 @@ pub fn start_rename_module_workflow() -> Result<(), String> {
         if user_confirms_revert() {
             engine.revert()?;
         }
+        print_failure_message(&context);
         return Ok(());
     }
+    print_success_message(&context);
     Ok(())
 }
 
@@ -345,4 +347,18 @@ fn user_confirms_revert() -> bool {
     Confirm::new("Looks like something went wrong. Should we revert the changes made so far?")
         .prompt()
         .unwrap_or(false)
+}
+
+fn print_success_message(context: &Context) {
+    log::success(format!(
+        "Successfully renamed module {} to {}.",
+        context.target_module.name, context.target_name
+    ));
+}
+
+fn print_failure_message(context: &Context) {
+    log::error(format!(
+        "Failed to rename module {} to {}.",
+        context.target_module.name, context.target_name
+    ));
 }

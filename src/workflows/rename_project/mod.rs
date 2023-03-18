@@ -30,6 +30,7 @@ pub fn start_rename_project_workflow() -> Result<(), String> {
         if user_confirms_revert() {
             engine.revert()?;
         }
+        print_failure_message(&context);
         return Ok(());
     }
 
@@ -37,6 +38,7 @@ pub fn start_rename_project_workflow() -> Result<(), String> {
         cleanup(&context.project_root.with_file_name(&context.target_name))?;
     }
 
+    print_success_message(&context);
     Ok(())
 }
 
@@ -214,4 +216,18 @@ fn cleanup(project_root: &Path) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+fn print_success_message(context: &Context) {
+    log::success(format!(
+        "Successfully renamed project {} to {}.",
+        context.project_name, context.target_name
+    ));
+}
+
+fn print_failure_message(context: &Context) {
+    log::error(format!(
+        "Failed to rename project {} to {}.",
+        context.project_name, context.target_name
+    ));
 }
