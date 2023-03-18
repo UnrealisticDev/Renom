@@ -11,7 +11,6 @@ use super::target::generate_target_changeset;
 /// Generate a changeset to rename a code project from the
 /// old project name to the new project name. This includes the
 /// following changes:
-/// - Replace old name with new name in project descriptor file
 /// - Rename the project descriptor file
 /// - Replace old name with new name in executable target file
 /// - Rename executable target file
@@ -54,7 +53,6 @@ pub fn generate_code_changeset(context: &Context) -> Vec<Change> {
         append_redirect_to_engine_config(project_root, old_project_name, new_project_name),
         add_game_name_to_engine_config(project_root, new_project_name),
         add_project_name_to_game_config(project_root, new_project_name),
-        replace_in_project_descriptor(project_root, old_project_name, new_project_name),
         rename_project_descriptor(project_root, old_project_name, new_project_name),
         rename_project_root(project_root, new_project_name),
     ]);
@@ -83,20 +81,6 @@ fn find_target_file_names(project_root: &Path) -> Vec<String> {
                 .map(|filename| filename.to_string())
         })
         .collect()
-}
-
-fn replace_in_project_descriptor(
-    project_root: &Path,
-    old_project_name: &str,
-    new_project_name: &str,
-) -> Change {
-    Change::ReplaceInFile(ReplaceInFile::new(
-        project_root
-            .join(old_project_name)
-            .with_extension("uproject"),
-        old_project_name,
-        new_project_name,
-    ))
 }
 
 fn rename_project_descriptor(
