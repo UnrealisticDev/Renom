@@ -27,8 +27,10 @@ pub fn start_rename_project_workflow() -> Result<(), String> {
     let mut engine = Engine::new();
     if let Err(err) = engine.execute(changeset, &backup_dir) {
         log::error(&err);
-        engine.revert()?;
-        return Err(err);
+        if user_confirms_revert() {
+            engine.revert()?;
+        }
+        return Ok(());
     }
 
     if matches!(&context.project_type, ProjectType::Code) && user_confirms_cleanup() {
@@ -169,6 +171,13 @@ fn create_backup_dir(project_root: &Path) -> Result<PathBuf, String> {
     let backup_dir = project_root.join(".renom/backup");
     fs::create_dir_all(&backup_dir).map_err(|err| err.to_string())?;
     Ok(backup_dir)
+}
+
+/// Request revert desired from the user.
+fn user_confirms_revert() -> bool {
+    Confirm::new("Looks like something went wrong. Should we revert the changes made so far?")
+        .prompt()
+        .unwrap_or(false)
 }
 
 /// Request cleanup desired from the user.
