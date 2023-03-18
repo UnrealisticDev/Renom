@@ -18,6 +18,7 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         project_root,
         project_name,
         project_targets,
+        project_config_files,
         modules,
         target_module:
             Module {
@@ -73,7 +74,6 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         new_name,
     ));
 
-    // @todo: update in plugin descriptor
     if let ModuleType::Plugin = r#type {
         changeset.push(replace_mod_reference_in_plugin_descriptor(
             &plugin.as_ref().unwrap(),
@@ -81,6 +81,12 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
             new_name,
         ));
     }
+
+    changeset.extend(
+        project_config_files
+            .iter()
+            .map(|config_file| replace_mod_references_in_config(config_file, old_name, new_name)),
+    );
 
     changeset.push(update_existing_redirects(project_root, old_name, new_name));
     changeset.push(append_mod_redirect(project_root, old_name, new_name));
@@ -200,5 +206,13 @@ fn replace_mod_reference_in_plugin_descriptor(
         plugin.root.join(&plugin.name).with_extension("uplugin"),
         format!(r#""{}""#, old_name),
         format!(r#""{}""#, new_name),
+    ))
+}
+
+fn replace_mod_references_in_config(config: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        config,
+        format!(r#"/Script/{}\."#, old_name),
+        format!(r#"/Script/{}."#, new_name),
     ))
 }

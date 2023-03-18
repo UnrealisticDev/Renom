@@ -41,6 +41,7 @@ fn gather_context() -> Result<Context, String> {
         .chain(detect_plugin_modules(&project_plugins)?)
         .collect::<Vec<Module>>();
     let project_targets = detect_project_targets(&project_root)?;
+    let project_config_files = detect_project_config_files(&project_root)?;
     let target_module = get_target_module_from_user(&modules)?;
     let target_name = get_target_name_from_user(&modules)?;
     let implementing_source = find_implementing_source(&target_module.root);
@@ -51,6 +52,7 @@ fn gather_context() -> Result<Context, String> {
         project_root,
         project_name,
         project_targets,
+        project_config_files,
         modules,
         target_module,
         target_name,
@@ -226,6 +228,16 @@ fn get_dir_name(dir: &Path) -> String {
         .to_str()
         .expect("name should be valid Unicode")
         .to_string()
+}
+
+fn detect_project_config_files(project_root: &Path) -> Result<Vec<PathBuf>, String> {
+    let config_dir = project_root.join("Config");
+    Ok(WalkDir::new(config_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "ini"))
+        .map(|entry| entry.path().to_owned())
+        .collect())
 }
 
 fn get_target_module_from_user(modules: &[Module]) -> Result<Module, String> {
