@@ -3,9 +3,10 @@ use std::{fs, io::stdin, path::Path};
 use crate::{
     changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
     presentation::log,
+    workflows::rename_project::context::Context,
 };
 
-use super::{generate_module_changeset, generate_target_changeset};
+use super::target::generate_target_changeset;
 
 /// Generate a changeset to rename a code project from the
 /// old project name to the new project name. This includes the
@@ -16,43 +17,21 @@ use super::{generate_module_changeset, generate_target_changeset};
 /// - Rename executable target file
 /// - Replace old name with new name in editor target file
 /// - Rename editor target file
-/// - Replace old name with new name in game module build file
-/// - Rename game module build file
 /// - Replace old API references in header files
-/// - Rename game module header file
-/// - Rename game module source file
-/// - Rename source subfolder
 /// - Update existing redirect entries in DefaultEngine config file
 /// - Append redirect entry to DefaultEngine config file
 /// - Add a GameName entry under the URL section to the DefaultEngine.ini config file
 /// - Add a ProjectName entry under the GeneralProjectSettings section to the DefaultGame.ini config file
 /// - Rename project root directory
-pub fn generate_code_changeset(
-    old_project_name: &str,
-    new_project_name: &str,
-    project_root: impl AsRef<Path>,
-) -> Vec<Change> {
-    let project_root = project_root.as_ref();
-    let mut changeset = vec![];
+pub fn generate_code_changeset(context: &Context) -> Vec<Change> {
+    let Context {
+        project_root,
+        project_name: old_project_name,
+        target_name: new_project_name,
+        ..
+    } = context;
 
-    // do modules first, we can avoid having to
-    // track changes that might happen to target files
-    // @todo: introduce opt-out mechanism
-    // do not need to rename all modules
-    find_module_names(project_root)
-        .iter()
-        .for_each(|old_module_name| {
-            log::basic(format!("Found project module named {}.", old_module_name));
-            log::prompt("Target module name");
-            let new_module_name = request_final_module_name();
-            changeset.extend(generate_module_changeset(
-                old_module_name,
-                project_root.join("Source").join(old_module_name),
-                &new_module_name,
-                project_root,
-                old_project_name,
-            ))
-        });
+    let mut changeset = vec![];
 
     // @todo: introduce opt-out mechanism
     // do not need to rename all targets
@@ -84,29 +63,6 @@ pub fn generate_code_changeset(
 }
 
 fn request_final_target_name() -> String {
-    let mut buffer = String::new();
-    stdin()
-        .read_line(&mut buffer)
-        .map(|_| String::from(buffer.trim()))
-        .map_err(|err| err.to_string())
-        .unwrap()
-}
-
-fn find_module_names(project_root: &Path) -> Vec<String> {
-    fs::read_dir(project_root.join("Source"))
-        .expect("could not read source dir")
-        .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.path().is_dir())
-        .filter_map(|entry| {
-            entry
-                .file_name()
-                .to_str()
-                .map(|filename| filename.to_owned())
-        })
-        .collect()
-}
-
-fn request_final_module_name() -> String {
     let mut buffer = String::new();
     stdin()
         .read_line(&mut buffer)
@@ -212,30 +168,33 @@ fn rename_project_root(project_root: &Path, new_project_name: &str) -> Change {
 
 #[cfg(test)]
 mod tests {
-    use crate::changes::*;
+    use std::path::PathBuf;
+
+    use crate::{
+        changes::*,
+        workflows::rename_project::context::{Context, ProjectType},
+    };
 
     use super::generate_code_changeset;
 
     #[test]
     fn code_changeset_is_correct() {
-        let old_project_name = "Start";
-        let new_project_name = "Finish";
-        let project_root = "";
-        let changeset = generate_code_changeset(old_project_name, new_project_name, project_root);
+        let changeset = generate_code_changeset(&Context {
+            project_root: PathBuf::from(""),
+            project_name: "Start".into(),
+            project_type: ProjectType::Code,
+            target_name: "Finish".into(),
+        });
         let expected = vec![
             // Replace old name with new name in project descriptor
-            Change::ReplaceInFile(ReplaceInFile::new(
-                "Start.uproject",
-                old_project_name,
-                new_project_name,
-            )),
+            Change::ReplaceInFile(ReplaceInFile::new("Start.uproject", "Start", "Finish")),
             // Rename project descriptor
             Change::RenameFile(RenameFile::new("Start.uproject", "Finish.uproject")),
             // Replace old name with new name in executable target file
             Change::ReplaceInFile(ReplaceInFile::new(
                 "Source/Start.Target.cs",
-                old_project_name,
-                new_project_name,
+                "Start",
+                "Finish",
             )),
             // Rename executable target file
             Change::RenameFile(RenameFile::new(
@@ -245,8 +204,8 @@ mod tests {
             // Replace old name with new name in editor target file
             Change::ReplaceInFile(ReplaceInFile::new(
                 "Source/StartEditor.Target.cs",
-                old_project_name,
-                new_project_name,
+                "Start",
+                "Finish",
             )),
             // Rename editor target file
             Change::RenameFile(RenameFile::new(
@@ -256,8 +215,8 @@ mod tests {
             // Replace old name with new name in game module build file
             Change::ReplaceInFile(ReplaceInFile::new(
                 "Source/Start/Start.Build.cs",
-                old_project_name,
-                new_project_name,
+                "Start",
+                "Finish",
             )),
             // Rename game module build file
             Change::RenameFile(RenameFile::new(
@@ -278,8 +237,8 @@ mod tests {
             // Replace old name with new name api references in header files
             Change::ReplaceInFile(ReplaceInFile::new(
                 "Source/Start/Start.cpp",
-                old_project_name,
-                new_project_name,
+                "Start",
+                "Finish",
             )),
             // Rename game module source file
             Change::RenameFile(RenameFile::new(

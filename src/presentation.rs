@@ -27,11 +27,6 @@ pub mod log {
         stdout().flush().unwrap();
     }
 
-    /// Print a newline.
-    pub fn newline() {
-        println!();
-    }
-
     /// Print an error.
     pub fn error<S: AsRef<str>>(text: S) {
         println!("\n\t[ Error ]\n\t{}\n", text.as_ref().red());

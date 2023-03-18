@@ -1,3 +1,6 @@
+mod changeset;
+mod context;
+
 use std::{
     ffi::OsStr,
     fs,
@@ -8,46 +11,32 @@ use inquire::{validator::Validation, CustomUserError, Select, Text};
 use regex::Regex;
 use walkdir::WalkDir;
 
-use crate::{changesets::generate_module_changeset, engine::Engine, unreal::Module};
+use crate::{engine::Engine, presentation::log, unreal::Module};
 
-struct RenameModuleContext {
-    project_root: PathBuf,
-    project_name: String,
-    project_modules: Vec<Module>,
-    target_module: Module,
-    target_name: String,
-}
+use self::{changeset::generate_changeset, context::Context};
 
 pub fn start_rename_module_workflow() -> Result<(), String> {
     let context = gather_context()?;
-    let changeset = generate_module_changeset(
-        &context.target_module.name,
-        &context.target_module.root,
-        &context.target_name,
-        &context.project_root,
-        &context.project_name,
-    );
-    let backup_dir = context.project_root.join(".renom/backup");
-    fs::create_dir_all(&backup_dir).map_err(|err| err.to_string())?;
+    let changeset = generate_changeset(&context);
+    let backup_dir = create_backup_dir(&context.project_root)?;
     let mut engine = Engine::new();
-    if let Err(e) = engine.execute(changeset, backup_dir) {
-        println!("Err: {}", e);
-        engine.revert();
-        return Err(e);
+    if let Err(err) = engine.execute(changeset, backup_dir) {
+        log::error(&err);
+        engine.revert()?;
+        return Err(err);
     }
     Ok(())
 }
 
-fn gather_context() -> Result<RenameModuleContext, String> {
+fn gather_context() -> Result<Context, String> {
     let project_root = get_project_root_from_user()?;
     let project_name = detect_project_name(&project_root)?;
     let project_modules = detect_project_modules(&project_root)?;
     let target_module = get_target_module_from_user(&project_modules)?;
     let target_name = get_target_name_from_user(&project_modules)?;
-    Ok(RenameModuleContext {
+    Ok(Context {
         project_root,
         project_name,
-        project_modules,
         target_module,
         target_name,
     })
@@ -222,4 +211,10 @@ fn validate_target_name_is_valid_identifier(
             Ok(Validation::Invalid(error_message.into()))
         }
     }
+}
+
+fn create_backup_dir(project_root: &Path) -> Result<PathBuf, String> {
+    let backup_dir = project_root.join(".renom/backup");
+    fs::create_dir_all(&backup_dir).map_err(|err| err.to_string())?;
+    Ok(backup_dir)
 }

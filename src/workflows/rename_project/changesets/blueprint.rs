@@ -1,6 +1,9 @@
 use std::path::Path;
 
-use crate::changes::{Change, RenameFile, SetIniEntry};
+use crate::{
+    changes::{Change, RenameFile, SetIniEntry},
+    workflows::rename_project::context::Context,
+};
 
 /// Generate a changeset to rename a Blueprint project from the
 /// old project name to the new project name. This includes the
@@ -9,12 +12,14 @@ use crate::changes::{Change, RenameFile, SetIniEntry};
 /// - Add a GameName entry under the URL section to the DefaultEngine.ini config file
 /// - Add a ProjectName entry under the GeneralProjectSettings section to the DefaultGame.ini config file
 /// - Rename the project root directory
-pub fn generate_blueprint_changeset(
-    old_project_name: &str,
-    new_project_name: &str,
-    project_root: impl AsRef<Path>,
-) -> Vec<Change> {
-    let project_root = project_root.as_ref();
+pub fn generate_blueprint_changeset(context: &Context) -> Vec<Change> {
+    let Context {
+        project_root,
+        project_name: old_project_name,
+        target_name: new_project_name,
+        ..
+    } = context;
+
     vec![
         rename_project_descriptor(project_root, old_project_name, new_project_name),
         add_game_name_to_engine_config(project_root, new_project_name),
@@ -65,17 +70,23 @@ fn rename_project_root(project_root: &Path, new_project_name: &str) -> Change {
 
 #[cfg(test)]
 mod tests {
-    use crate::changes::*;
+    use std::path::PathBuf;
+
+    use crate::{
+        changes::*,
+        workflows::rename_project::context::{Context, ProjectType},
+    };
 
     use super::generate_blueprint_changeset;
 
     #[test]
     fn blueprint_changeset_is_correct() {
-        let old_project_name = "Start";
-        let new_project_name = "Finish";
-        let project_root = "";
-        let changeset =
-            generate_blueprint_changeset(old_project_name, new_project_name, project_root);
+        let changeset = generate_blueprint_changeset(&Context {
+            project_root: PathBuf::from(""),
+            project_name: "Start".into(),
+            project_type: ProjectType::Blueprint,
+            target_name: "Finish".into(),
+        });
         let expected = vec![
             // Rename project descriptor
             Change::RenameFile(RenameFile::new("Start.uproject", "Finish.uproject")),

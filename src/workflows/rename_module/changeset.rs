@@ -6,23 +6,25 @@ use std::{
 use regex::Regex;
 use walkdir::WalkDir;
 
-use crate::changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile};
+use crate::{
+    changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile},
+    unreal::Module,
+};
 
-/// Generate a changeset to rename a build file. This includes the
-/// following changes:
-/// - Rename target class
-/// - Rename target file
-///
-/// @todo: replace module name in other modules
-pub fn generate_module_changeset(
-    old_name: &str,
-    mod_root: impl AsRef<Path>,
-    new_name: &str,
-    project_root: impl AsRef<Path>,
-    project_name: &str,
-) -> Vec<Change> {
-    let project_root = project_root.as_ref();
-    let mod_root = mod_root.as_ref();
+use super::context::Context;
+
+/// Generate a changeset to rename an Unreal Engine module.
+pub fn generate_changeset(context: &Context) -> Vec<Change> {
+    let Context {
+        project_root,
+        project_name,
+        target_module: Module {
+            root: mod_root,
+            name: old_name,
+        },
+        target_name: new_name,
+    } = context;
+
     let mut changeset = vec![
         rename_build_class(mod_root, old_name, new_name),
         rename_build_file(mod_root, old_name, new_name),
