@@ -1,5 +1,7 @@
 use std::{fmt::Display, path::PathBuf};
 
+use colored::Colorize;
+
 #[derive(Debug, PartialEq)]
 pub struct ReplaceInFile {
     pub path: PathBuf,
@@ -21,10 +23,14 @@ impl Display for ReplaceInFile {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Replace [{}] with [{}] in file [{}]",
-            &self.from,
-            &self.to,
-            &self.path.to_str().unwrap_or("invalid Unicode path")
+            "replace {} with {} in file {}",
+            &self.from.dimmed(),
+            &self.to.dimmed(),
+            &self
+                .path
+                .to_str()
+                .unwrap_or("invalid Unicode path")
+                .dimmed()
         )
     }
 }

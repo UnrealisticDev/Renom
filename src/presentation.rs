@@ -1,6 +1,9 @@
 pub mod log {
     use colored::*;
-    use std::io::{stdout, Write};
+    use std::{
+        fmt::Display,
+        io::{stdout, Write},
+    };
 
     /// Toggles coloring based on environment.
     /// For instance, colors do not work for `cmd`on Windows.
@@ -13,12 +16,28 @@ pub mod log {
 
     /// Print a header. Includes a preliminary newline.
     pub fn header<S: AsRef<str>>(text: S) {
-        println!("\n[ {} ]", text.as_ref().green());
+        println!(
+            "\n{open_brace} {text} {close_brace}",
+            open_brace = "[".green(),
+            text = text.as_ref(),
+            close_brace = "]".green()
+        );
     }
 
     /// Print the text without any frills.
     pub fn basic<S: AsRef<str>>(text: S) {
         println!("{}", text.as_ref());
+    }
+
+    /// Print a step.
+    pub fn step<A: Display, B: Display>(process: A, text: B) {
+        println!(
+            "{open_paren} {process} {close_paren} {text}",
+            open_paren = "(".purple(),
+            process = process,
+            close_paren = ")".purple(),
+            text = text
+        )
     }
 
     /// Print a prompt without a new line.

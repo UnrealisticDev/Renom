@@ -1,5 +1,7 @@
 use std::{fmt::Display, path::PathBuf};
 
+use colored::Colorize;
+
 #[derive(Debug, PartialEq)]
 pub struct SetIniEntry {
     pub path: PathBuf,
@@ -28,11 +30,15 @@ impl Display for SetIniEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Set section [{}], key [{}] to value [{}] in INI file [{}]",
-            &self.section,
-            &self.key,
-            &self.value,
-            &self.path.to_str().unwrap_or("invalid Unicode path")
+            "set [{}] {} = {} in config file {}",
+            &self.section.dimmed(),
+            &self.key.dimmed(),
+            &self.value.dimmed(),
+            &self
+                .path
+                .to_str()
+                .unwrap_or("invalid Unicode path")
+                .dimmed()
         )
     }
 }
