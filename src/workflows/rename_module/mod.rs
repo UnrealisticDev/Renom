@@ -32,13 +32,21 @@ fn gather_context() -> Result<Context, String> {
     let project_root = get_project_root_from_user()?;
     let project_name = detect_project_name(&project_root)?;
     let project_modules = detect_project_modules(&project_root)?;
+    let project_targets = detect_project_targets(&project_root)?;
     let target_module = get_target_module_from_user(&project_modules)?;
     let target_name = get_target_name_from_user(&project_modules)?;
+    let implementing_source = find_implementing_source(&target_module.root);
+    let headers_with_export_macro =
+        find_headers_with_export_macro(&target_module.root, &target_module.name);
+
     Ok(Context {
         project_root,
         project_name,
+        project_targets,
         target_module,
         target_name,
+        source_with_implement_macro: implementing_source,
+        headers_with_export_macro,
     })
 }
 
@@ -128,6 +136,23 @@ fn detect_project_modules(project_root: &PathBuf) -> Result<Vec<Module>, String>
         .collect())
 }
 
+fn detect_project_targets(project_root: &Path) -> Result<Vec<PathBuf>, String> {
+    let source_dir = project_root.join("Source");
+    assert!(source_dir.is_dir());
+    Ok(fs::read_dir(source_dir)
+        .map_err(|err| err.to_string())?
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .path()
+                .to_str()
+                .map(|str| str.ends_with(".Target.cs"))
+                .unwrap_or(false)
+        })
+        .map(|entry| entry.path().to_owned())
+        .collect())
+}
+
 fn dir_contains_module_descriptor(dir: &Path) -> bool {
     assert!(dir.is_dir());
     let dir_name = dir.file_name().expect("directory name should exist");
@@ -211,6 +236,30 @@ fn validate_target_name_is_valid_identifier(
             Ok(Validation::Invalid(error_message.into()))
         }
     }
+}
+
+fn find_implementing_source(module_root: &Path) -> Option<PathBuf> {
+    WalkDir::new(module_root)
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().to_owned())
+        .filter(|path| path.is_file() && path.extension().map_or(false, |ext| ext == "cpp"))
+        .find(|source| {
+            fs::read_to_string(source).map_or(false, |content| content.contains("_MODULE"))
+        })
+}
+
+fn find_headers_with_export_macro(module_root: &Path, module_name: &str) -> Vec<PathBuf> {
+    WalkDir::new(module_root)
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|entry| entry.path().to_owned())
+        .filter(|path| {
+            fs::read_to_string(path).map_or(false, |content| {
+                content.contains(&format!("{}_API", module_name.to_uppercase()))
+            })
+        })
+        .collect()
 }
 
 fn create_backup_dir(project_root: &Path) -> Result<PathBuf, String> {
