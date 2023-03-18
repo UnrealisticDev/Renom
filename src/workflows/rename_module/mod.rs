@@ -11,7 +11,11 @@ use inquire::{validator::Validation, CustomUserError, Select, Text};
 use regex::Regex;
 use walkdir::WalkDir;
 
-use crate::{engine::Engine, presentation::log, unreal::Module};
+use crate::{
+    engine::Engine,
+    presentation::log,
+    unreal::{Module, PluginType},
+};
 
 use self::{changeset::generate_changeset, context::Context};
 
@@ -31,10 +35,13 @@ pub fn start_rename_module_workflow() -> Result<(), String> {
 fn gather_context() -> Result<Context, String> {
     let project_root = get_project_root_from_user()?;
     let project_name = detect_project_name(&project_root)?;
-    let project_modules = detect_project_modules(&project_root)?;
+    let modules = detect_project_modules(&project_root)?
+        .into_iter()
+        .chain(detect_plugin_modules(&project_root)?)
+        .collect::<Vec<Module>>();
     let project_targets = detect_project_targets(&project_root)?;
-    let target_module = get_target_module_from_user(&project_modules)?;
-    let target_name = get_target_name_from_user(&project_modules)?;
+    let target_module = get_target_module_from_user(&modules)?;
+    let target_name = get_target_name_from_user(&modules)?;
     let implementing_source = find_implementing_source(&target_module.root);
     let headers_with_export_macro =
         find_headers_with_export_macro(&target_module.root, &target_module.name);
@@ -43,7 +50,7 @@ fn gather_context() -> Result<Context, String> {
         project_root,
         project_name,
         project_targets,
-        project_modules,
+        modules,
         target_module,
         target_name,
         source_with_implement_macro: implementing_source,
@@ -133,6 +140,24 @@ fn detect_project_modules(project_root: &PathBuf) -> Result<Vec<Module>, String>
         .map(|entry| Module {
             root: entry.path().to_owned(),
             name: get_dir_name(&entry.path()),
+            r#type: PluginType::Project,
+        })
+        .collect())
+}
+
+/// Detect all plugin modules in a project given the path to the project root
+/// directory. Detects top-level modules and nested modules. Returns an error in
+/// case of I/O issues.
+fn detect_plugin_modules(project_root: &PathBuf) -> Result<Vec<Module>, String> {
+    let plugins_dir = project_root.join("Plugins");
+    Ok(WalkDir::new(plugins_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| entry.path().is_dir() && dir_contains_module_descriptor(entry.path()))
+        .map(|entry| Module {
+            root: entry.path().to_owned(),
+            name: get_dir_name(&entry.path()),
+            r#type: PluginType::Plugin,
         })
         .collect())
 }
@@ -168,18 +193,18 @@ fn get_dir_name(dir: &Path) -> String {
         .to_string()
 }
 
-fn get_target_module_from_user(project_modules: &[Module]) -> Result<Module, String> {
-    Select::new("Choose a module:", project_modules.to_vec())
+fn get_target_module_from_user(modules: &[Module]) -> Result<Module, String> {
+    Select::new("Choose a module:", modules.to_vec())
         .prompt()
         .map_err(|err| err.to_string())
 }
 
-fn get_target_name_from_user(project_modules: &[Module]) -> Result<String, String> {
-    let project_modules = project_modules.to_vec();
+fn get_target_name_from_user(modules: &[Module]) -> Result<String, String> {
+    let modules = modules.to_vec();
     Text::new("Provide a new name for the module:")
         .with_validator(validate_target_name_is_not_empty)
         .with_validator(validate_target_name_is_concise)
-        .with_validator(move |input: &str| validate_target_name_is_unique(input, &project_modules))
+        .with_validator(move |input: &str| validate_target_name_is_unique(input, &modules))
         .with_validator(validate_target_name_is_valid_identifier)
         .prompt()
         .map_err(|err| err.to_string())
@@ -211,12 +236,9 @@ fn validate_target_name_is_concise(target_name: &str) -> Result<Validation, Cust
 
 fn validate_target_name_is_unique(
     target_name: &str,
-    project_modules: &[Module],
+    modules: &[Module],
 ) -> Result<Validation, CustomUserError> {
-    match project_modules
-        .iter()
-        .all(|module| module.name != target_name)
-    {
+    match modules.iter().all(|module| module.name != target_name) {
         true => Ok(Validation::Valid),
         false => {
             let error_message = "Target name must not conflict with another module";

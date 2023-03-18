@@ -18,11 +18,13 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         project_root,
         project_name,
         project_targets,
-        project_modules,
-        target_module: Module {
-            root: module_root,
-            name: old_name,
-        },
+        modules,
+        target_module:
+            Module {
+                root: module_root,
+                name: old_name,
+                ..
+            },
         target_name: new_name,
         source_with_implement_macro,
         headers_with_export_macro,
@@ -51,7 +53,7 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
     );
 
     changeset.extend(
-        project_modules
+        modules
             .iter()
             .filter(|module| &module.name != old_name)
             .map(|module| {
@@ -69,6 +71,8 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         old_name,
         new_name,
     ));
+
+    // @todo: update in plugin descriptor
 
     changeset.push(update_existing_redirects(project_root, old_name, new_name));
     changeset.push(append_mod_redirect(project_root, old_name, new_name));

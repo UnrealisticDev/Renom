@@ -1,5 +1,11 @@
 use std::{fmt::Display, path::PathBuf};
 
+#[derive(Clone)]
+pub enum PluginType {
+    Project,
+    Plugin,
+}
+
 /// Information about an Unreal Engine module.
 #[derive(Clone)]
 pub struct Module {
@@ -7,6 +13,8 @@ pub struct Module {
     pub name: String,
     // The path to the root of the module.
     pub root: PathBuf,
+    /// The type of the module.
+    pub r#type: PluginType,
 }
 
 impl Display for Module {
