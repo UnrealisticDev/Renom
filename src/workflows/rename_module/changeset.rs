@@ -17,6 +17,8 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
     let Context {
         project_root,
         project_name,
+        project_targets,
+        project_modules,
         target_module: Module {
             root: module_root,
             name: old_name,
@@ -24,7 +26,6 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         target_name: new_name,
         source_with_implement_macro,
         headers_with_export_macro,
-        project_targets,
     } = context;
 
     let mut changeset = vec![];
@@ -47,6 +48,19 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         project_targets
             .iter()
             .map(|target_file| replace_mod_reference_in_target(target_file, old_name, new_name)),
+    );
+
+    changeset.extend(
+        project_modules
+            .iter()
+            .filter(|module| &module.name != old_name)
+            .map(|module| {
+                replace_mod_reference_in_mod(
+                    &module.root.join(&module.name).with_extension("Build.cs"),
+                    old_name,
+                    new_name,
+                )
+            }),
     );
 
     changeset.push(replace_mod_reference_in_project_descriptor(
@@ -109,6 +123,14 @@ fn append_mod_redirect(project_root: &Path, old_name: &str, new_name: &str) -> C
 fn replace_mod_reference_in_target(target: &Path, old_name: &str, new_name: &str) -> Change {
     Change::ReplaceInFile(ReplaceInFile::new(
         target,
+        format!(r#""{}""#, old_name),
+        format!(r#""{}""#, new_name),
+    ))
+}
+
+fn replace_mod_reference_in_mod(module: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        module,
         format!(r#""{}""#, old_name),
         format!(r#""{}""#, new_name),
     ))

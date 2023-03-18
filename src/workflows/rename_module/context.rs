@@ -10,6 +10,8 @@ pub struct Context {
     pub project_name: String,
     /// Build targets for the project that the module is part of.
     pub project_targets: Vec<PathBuf>,
+    /// Code modules in the project.
+    pub project_modules: Vec<Module>,
     /// The specific module to rename.
     pub target_module: Module,
     /// The target name for the module.

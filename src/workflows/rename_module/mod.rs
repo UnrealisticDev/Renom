@@ -43,6 +43,7 @@ fn gather_context() -> Result<Context, String> {
         project_root,
         project_name,
         project_targets,
+        project_modules,
         target_module,
         target_name,
         source_with_implement_macro: implementing_source,
