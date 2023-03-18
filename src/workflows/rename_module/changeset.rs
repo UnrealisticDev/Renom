@@ -7,7 +7,7 @@ use regex::Regex;
 
 use crate::{
     changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile},
-    unreal::Module,
+    unreal::{Module, ModuleType, Plugin},
 };
 
 use super::context::Context;
@@ -23,7 +23,8 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
             Module {
                 root: module_root,
                 name: old_name,
-                ..
+                r#type,
+                plugin,
             },
         target_name: new_name,
         source_with_implement_macro,
@@ -73,6 +74,13 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
     ));
 
     // @todo: update in plugin descriptor
+    if let ModuleType::Plugin = r#type {
+        changeset.push(replace_mod_reference_in_plugin_descriptor(
+            &plugin.as_ref().unwrap(),
+            old_name,
+            new_name,
+        ));
+    }
 
     changeset.push(update_existing_redirects(project_root, old_name, new_name));
     changeset.push(append_mod_redirect(project_root, old_name, new_name));
@@ -178,6 +186,18 @@ fn replace_mod_reference_in_project_descriptor(
 ) -> Change {
     Change::ReplaceInFile(ReplaceInFile::new(
         project_root.join(project_name).with_extension("uproject"),
+        format!(r#""{}""#, old_name),
+        format!(r#""{}""#, new_name),
+    ))
+}
+
+fn replace_mod_reference_in_plugin_descriptor(
+    plugin: &Plugin,
+    old_name: &str,
+    new_name: &str,
+) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        plugin.root.join(&plugin.name).with_extension("uplugin"),
         format!(r#""{}""#, old_name),
         format!(r#""{}""#, new_name),
     ))

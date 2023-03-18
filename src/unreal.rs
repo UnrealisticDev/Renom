@@ -1,7 +1,7 @@
 use std::{fmt::Display, path::PathBuf};
 
 #[derive(Clone)]
-pub enum PluginType {
+pub enum ModuleType {
     Project,
     Plugin,
 }
@@ -14,11 +14,22 @@ pub struct Module {
     // The path to the root of the module.
     pub root: PathBuf,
     /// The type of the module.
-    pub r#type: PluginType,
+    pub r#type: ModuleType,
+    /// The host plugin (for plugin modules).
+    pub plugin: Option<Plugin>,
 }
 
 impl Display for Module {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.name)
     }
+}
+
+/// Information about an Unreal Engine plugin.
+#[derive(Clone)]
+pub struct Plugin {
+    /// The name of the plugin.
+    pub name: String,
+    /// The path to the root of the plugin.
+    pub root: PathBuf,
 }

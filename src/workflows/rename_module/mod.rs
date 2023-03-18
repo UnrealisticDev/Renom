@@ -14,7 +14,7 @@ use walkdir::WalkDir;
 use crate::{
     engine::Engine,
     presentation::log,
-    unreal::{Module, PluginType},
+    unreal::{Module, ModuleType, Plugin},
 };
 
 use self::{changeset::generate_changeset, context::Context};
@@ -35,9 +35,10 @@ pub fn start_rename_module_workflow() -> Result<(), String> {
 fn gather_context() -> Result<Context, String> {
     let project_root = get_project_root_from_user()?;
     let project_name = detect_project_name(&project_root)?;
+    let project_plugins = detect_project_plugins(&project_root)?;
     let modules = detect_project_modules(&project_root)?
         .into_iter()
-        .chain(detect_plugin_modules(&project_root)?)
+        .chain(detect_plugin_modules(&project_plugins)?)
         .collect::<Vec<Module>>();
     let project_targets = detect_project_targets(&project_root)?;
     let target_module = get_target_module_from_user(&modules)?;
@@ -127,6 +128,33 @@ fn detect_project_name(project_root: &PathBuf) -> Result<String, String> {
         .ok_or("project name is not valid Unicode".into())
 }
 
+/// Detect all plugins in a project given the path to the project root
+/// directory. Detects top-level plugins and nested plugins. Returns an error in
+/// case of I/O issues.
+fn detect_project_plugins(project_root: &PathBuf) -> Result<Vec<Plugin>, String> {
+    let plugins_dir = project_root.join("Plugins");
+    Ok(WalkDir::new(plugins_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .map_or(false, |ext| ext == "uplugin")
+        })
+        .map(|entry| Plugin {
+            root: entry.path().parent().unwrap().to_owned(),
+            name: entry
+                .path()
+                .file_stem()
+                .unwrap()
+                .to_str()
+                .unwrap()
+                .to_owned(),
+        })
+        .collect())
+}
+
 /// Detect all project modules in a project given the path to the project root
 /// directory. Detects top-level modules and nested modules. Assumes that the
 /// Source folder exists. Returns an error in case of I/O issues.
@@ -140,24 +168,31 @@ fn detect_project_modules(project_root: &PathBuf) -> Result<Vec<Module>, String>
         .map(|entry| Module {
             root: entry.path().to_owned(),
             name: get_dir_name(&entry.path()),
-            r#type: PluginType::Project,
+            r#type: ModuleType::Project,
+            plugin: None,
         })
         .collect())
 }
 
-/// Detect all plugin modules in a project given the path to the project root
-/// directory. Detects top-level modules and nested modules. Returns an error in
-/// case of I/O issues.
-fn detect_plugin_modules(project_root: &PathBuf) -> Result<Vec<Module>, String> {
-    let plugins_dir = project_root.join("Plugins");
-    Ok(WalkDir::new(plugins_dir)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_dir() && dir_contains_module_descriptor(entry.path()))
-        .map(|entry| Module {
-            root: entry.path().to_owned(),
-            name: get_dir_name(&entry.path()),
-            r#type: PluginType::Plugin,
+/// Detect all plugin modules in a project given the list of project plugins.
+/// Detects top-level modules and nested modules. Returns an error in case of
+/// I/O issues.
+fn detect_plugin_modules(project_plugins: &[Plugin]) -> Result<Vec<Module>, String> {
+    Ok(project_plugins
+        .iter()
+        .flat_map(|plugin| {
+            WalkDir::new(&plugin.root)
+                .into_iter()
+                .filter_map(Result::ok)
+                .filter(|entry| {
+                    entry.path().is_dir() && dir_contains_module_descriptor(entry.path())
+                })
+                .map(move |entry| Module {
+                    root: entry.path().to_owned(),
+                    name: get_dir_name(&entry.path()),
+                    r#type: ModuleType::Plugin,
+                    plugin: Some(plugin.clone()),
+                })
         })
         .collect())
 }
