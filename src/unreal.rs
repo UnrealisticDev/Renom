@@ -33,3 +33,18 @@ pub struct Plugin {
     /// The path to the root of the plugin.
     pub root: PathBuf,
 }
+
+/// Information about an Unreal Engine target.
+#[derive(Clone)]
+pub struct Target {
+    /// The name of the target.
+    pub name: String,
+    // The path to the target file.
+    pub path: PathBuf,
+}
+
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.name)
+    }
+}
