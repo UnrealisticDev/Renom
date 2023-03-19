@@ -1,8 +1,8 @@
 # Renom
 
-Renom is a simple program that allows you to rename your Unreal Engine 4
-projects. It handles both Blueprint-only and C++ projects, in accordance with
-the guidelines set forth
+Renom is a simple program that allows you to rename your Unreal Engine projects.
+It handles both Blueprint-only and C++ projects, in accordance with the
+guidelines set forth
 [here](https://unrealistic.dev/posts/rename-your-project-including-code).
 
 ![Screenshot](/assets/rename_project.png)
