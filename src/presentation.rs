@@ -1,9 +1,6 @@
 pub mod log {
     use colored::*;
-    use std::{
-        fmt::Display,
-        io::{stdout, Write},
-    };
+    use std::fmt::Display;
 
     /// Toggles coloring based on environment.
     /// For instance, colors do not work for `cmd`on Windows.
@@ -38,12 +35,6 @@ pub mod log {
             close_paren = ")".purple(),
             text = text
         )
-    }
-
-    /// Print a prompt without a new line.
-    pub fn prompt<S: AsRef<str>>(text: S) {
-        print!("{}: ", text.as_ref().blue());
-        stdout().flush().unwrap();
     }
 
     /// Print a success message.

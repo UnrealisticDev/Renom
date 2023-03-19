@@ -1,22 +1,14 @@
-use std::{fs, io::stdin, path::Path};
+use std::path::Path;
 
 use crate::{
     changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile, SetIniEntry},
-    presentation::log,
     workflows::rename_project::context::Context,
 };
-
-use super::target::generate_target_changeset;
 
 /// Generate a changeset to rename a code project from the
 /// old project name to the new project name. This includes the
 /// following changes:
 /// - Rename the project descriptor file
-/// - Replace old name with new name in executable target file
-/// - Rename executable target file
-/// - Replace old name with new name in editor target file
-/// - Rename editor target file
-/// - Replace old API references in header files
 /// - Update existing redirect entries in DefaultEngine config file
 /// - Append redirect entry to DefaultEngine config file
 /// - Add a GameName entry under the URL section to the DefaultEngine.ini config file
@@ -30,57 +22,14 @@ pub fn generate_code_changeset(context: &Context) -> Vec<Change> {
         ..
     } = context;
 
-    let mut changeset = vec![];
-
-    // @todo: introduce opt-out mechanism
-    // do not need to rename all targets
-    // @todo: surface read errors
-    find_target_file_names(project_root)
-        .iter()
-        .for_each(|old_target_name| {
-            log::basic(format!("Found project target named {}.", old_target_name));
-            log::prompt("Target final name");
-            let new_target_name = request_final_target_name();
-            changeset.extend(generate_target_changeset(
-                old_target_name,
-                &new_target_name,
-                project_root,
-            ))
-        });
-
-    changeset.extend(vec![
+    vec![
         update_redirects_in_engine_config(project_root, new_project_name),
         append_redirect_to_engine_config(project_root, old_project_name, new_project_name),
         add_game_name_to_engine_config(project_root, new_project_name),
         add_project_name_to_game_config(project_root, new_project_name),
         rename_project_descriptor(project_root, old_project_name, new_project_name),
         rename_project_root(project_root, new_project_name),
-    ]);
-
-    changeset
-}
-
-fn request_final_target_name() -> String {
-    let mut buffer = String::new();
-    stdin()
-        .read_line(&mut buffer)
-        .map(|_| String::from(buffer.trim()))
-        .map_err(|err| err.to_string())
-        .unwrap()
-}
-
-fn find_target_file_names(project_root: &Path) -> Vec<String> {
-    fs::read_dir(project_root.join("Source"))
-        .expect("could not read source dir")
-        .filter_map(|entry| entry.ok())
-        .filter_map(|entry| {
-            entry
-                .file_name()
-                .to_str()
-                .and_then(|filename| filename.strip_suffix(".Target.cs"))
-                .map(|filename| filename.to_string())
-        })
-        .collect()
+    ]
 }
 
 fn rename_project_descriptor(
