@@ -9,7 +9,7 @@ guidelines set forth
 
 Among other things, Renom:
 
-- Provides workflows to rename projects, targets, and modules
+- Provides workflows to rename projects, plugins, targets, and modules
 - Detects project name, targets, modules, and other metadata
 - Updates target, build, config, and source files
 - Creates backups of all affected files to prevent data loss
