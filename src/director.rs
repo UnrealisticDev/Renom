@@ -3,8 +3,8 @@ use inquire::{Confirm, Select};
 use crate::{
     presentation::log,
     workflows::{
-        start_rename_module_workflow, start_rename_project_workflow, start_rename_target_workflow,
-        Workflow,
+        start_rename_module_workflow, start_rename_plugin_workflow, start_rename_project_workflow,
+        start_rename_target_workflow, Workflow,
     },
 };
 
@@ -29,6 +29,7 @@ pub fn start_interactive_dialogue() {
     loop {
         match ok_or_quit!(request_workflow_selection_from_user()) {
             Workflow::RenameProject => ok_or_quit!(start_rename_project_workflow()),
+            Workflow::RenamePlugin => ok_or_quit!(start_rename_plugin_workflow()),
             Workflow::RenameTarget => ok_or_quit!(start_rename_target_workflow()),
             Workflow::RenameModule => ok_or_quit!(start_rename_module_workflow()),
         };
@@ -46,6 +47,7 @@ fn set_up_terminal() {
 fn request_workflow_selection_from_user() -> Result<Workflow, String> {
     let options = vec![
         Workflow::RenameProject,
+        Workflow::RenamePlugin,
         Workflow::RenameTarget,
         Workflow::RenameModule,
     ];
