@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::{
-    changes::{Change, RenameFile, ReplaceInFile},
+    changes::{AppendIniEntry, Change, RenameFile, ReplaceInFile},
     unreal::Plugin,
 };
 
@@ -36,6 +36,8 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         old_name,
         new_name,
     ));
+    changeset.push(update_existing_redirects(project_root, old_name, new_name));
+    changeset.push(append_plugin_redirect(project_root, old_name, new_name));
 
     changeset
 }
@@ -82,5 +84,31 @@ fn rename_plugin_references_in_plugin(plugin: &Plugin, old_name: &str, new_name:
         plugin_descriptor,
         format!(r#""{old_name}""#),
         format!(r#""{new_name}""#),
+    ))
+}
+
+fn update_existing_redirects(project_root: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::ReplaceInFile(ReplaceInFile::new(
+        project_root.join("Config").join("DefaultEngine.ini"),
+        format!(
+            r#"\(OldName="/(?P<old>.+?)/",\s*NewName="/{}/",\s*MatchSubstring=true\)"#,
+            old_name
+        ),
+        format!(
+            r#"(OldName="/$old/",NewName="/{}/",MatchSubstring=true)"#,
+            new_name
+        ),
+    ))
+}
+
+fn append_plugin_redirect(project_root: &Path, old_name: &str, new_name: &str) -> Change {
+    Change::AppendIniEntry(AppendIniEntry::new(
+        project_root.join("Config").join("DefaultEngine.ini"),
+        "CoreRedirects",
+        "+PackageRedirects",
+        format!(
+            r#"(OldName="/{}/",NewName="/{}/",MatchSubstring=true)"#,
+            old_name, new_name
+        ),
     ))
 }
