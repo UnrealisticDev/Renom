@@ -3,8 +3,8 @@ authors = ["Mustafa <mustafa.moiz125@gmail.com>"]
 edition = "2018"
 name = "renom"
 version = "1.1.1"
-description = "A simple program to rename Unreal Engine 4 projects."
-keywords = ["gamedev", "ue4", "unreal_engine", "rename"]
+description = "A simple program to rename Unreal Engine projects."
+keywords = ["gamedev", "ue4", "ue5", "unreal_engine", "rename"]
 categories = [
     "command-line-utilities",
     "development-tools",
