@@ -4,7 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use ini::Ini;
+use ini::{Ini, ParseOption};
 use regex::Regex;
 use sha2::{Digest, Sha256};
 
@@ -60,7 +60,11 @@ impl Change {
         let backup = Change::backup_file(path, backup_dir)?;
         let target = path.clone();
 
-        let mut ini = match Ini::load_from_file(&target) {
+        let read_opts = ParseOption {
+            enabled_escape: false,
+            enabled_quote: false,
+        };
+        let mut ini = match Ini::load_from_file_opt(&target, read_opts) {
             Ok(ini) => ini,
             Err(err) => match err {
                 ini::ini::Error::Io(io) => return Err(io),
@@ -86,7 +90,11 @@ impl Change {
         let backup = Change::backup_file(path, backup_dir)?;
         let target = path.clone();
 
-        let mut ini = match Ini::load_from_file(&target) {
+        let read_opts = ParseOption {
+            enabled_escape: false,
+            enabled_quote: false,
+        };
+        let mut ini = match Ini::load_from_file_opt(&target, read_opts) {
             Ok(ini) => ini,
             Err(err) => match err {
                 ini::ini::Error::Io(io) => return Err(io),

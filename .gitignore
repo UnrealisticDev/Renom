@@ -8,3 +8,6 @@ test/**/Intermediate/
 test/**/Saved/
 test/**/.vs/
 *.sln
+
+# Test output
+tests/temp
