@@ -5,7 +5,21 @@ It handles both Blueprint-only and C++ projects, in accordance with the
 guidelines set forth
 [here](https://unrealistic.dev/posts/rename-your-project-including-code).
 
-![Screenshot](/assets/rename_project.png)
+```shell
+> renom wizard
+
+[ Welcome to Renom ]
+> Choose a workflow: Rename a project
+> Project root directory path: LyraStarterGame
+> Provide a new name for the project: SpyroStarterGame
+( apply ) set [URL] GameName = SpyroStarterGame in config file LyraStarterGame\Config/DefaultEngine.ini
+( apply ) set [/Script/EngineSettings.GeneralProjectSettings] ProjectName = SpyroStarterGame in config file LyraStarterGame\Config/DefaultGame.ini
+( apply ) rename file LyraStarterGame\LyraStarterGame.uproject to LyraStarterGame\SpyroStarterGame.uproject
+( apply ) rename file LyraStarterGame to SpyroStarterGame
+
+        [ Success ]
+        Successfully renamed project LyraStarterGame to SpyroStarterGame.
+```
 
 Among other things, Renom:
 
@@ -54,7 +68,7 @@ cargo run
 Alternatively, you can use the `install` subcommand, which will pull and build
 Renom directly from [crates.io](https://crates.io/crates/renom). If the build is
 successful, you should be able to find the installed executable at
-*C:/Users/{User}/.cargo/bin/renom.exe*.
+_C:/Users/{User}/.cargo/bin/renom.exe_.
 
 ```shell
 cargo install renom
