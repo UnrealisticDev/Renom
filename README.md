@@ -29,47 +29,43 @@ Among other things, Renom:
 - Creates backups of all affected files to prevent data loss
 - Supports consecutive renames
 
-## Usage
+## Installation
 
-You can use Renom either via the binary release or by building from source.
+You can install Renom either by downloading the binary release or by using
+the Cargo package manager.
 
 ### Binary
 
-Simply download the latest
-[release](https://github.com/UnrealisticDev/Renom/releases) and start the
-program (`.exe`).
+Simply download the latest release
+[here](https://github.com/UnrealisticDev/Renom/releases) and put the executable
+(_.exe_) on your system PATH.
 
-### Building from Source
+### Cargo
 
-Renom is written in Rust. To build it from source, you will first need the [Rust
-toolchain](https://www.rust-lang.org/tools/install). Don't be scared, there is
-copious documentation every step of the way.
-
-Once you have Rust installed...
-
-1. Clone the repo
-
-```shell
-git clone https://github.com/UnrealisticDev/Renom.git
-```
-
-2. Navigate into the repo
-
-```shell
-cd Renom
-```
-
-3. Build and run
-
-```shell
-cargo run
-```
-
-Alternatively, you can use the `install` subcommand, which will pull and build
-Renom directly from [crates.io](https://crates.io/crates/renom). If the build is
-successful, you should be able to find the installed executable at
-_C:/Users/{User}/.cargo/bin/renom.exe_.
+Renom is written in Rust, and Cargo is the package manager for Rust. Install the
+Rust toolchain, which includes Cargo, by following the instructions
+[here](https://www.rust-lang.org/tools/install). Once Cargo is installed, run
+the following command to install Renom:
 
 ```shell
 cargo install renom
+```
+
+This will pull and build Renom directly from
+[crates.io](https://crates.io/crates/renom). If the build is successful, you
+should be able to find the installed executable at
+_C:/Users/{User}/.cargo/bin/renom.exe_.
+
+## Usage
+
+Run the following command to see available options:
+
+```shell
+renom
+```
+
+To start an interactive session, run the following command instead:
+
+```shell
+renom wizard
 ```
