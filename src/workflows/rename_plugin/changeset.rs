@@ -5,7 +5,7 @@ use crate::{
     unreal::Plugin,
 };
 
-use super::context::Context;
+use super::Context;
 
 /// Generate a changeset to rename an Unreal Engine plugin.
 pub fn generate_changeset(context: &Context) -> Vec<Change> {
@@ -13,11 +13,11 @@ pub fn generate_changeset(context: &Context) -> Vec<Change> {
         project_root,
         project_name,
         project_plugins,
-        target_plugin: Plugin {
+        plugin: Plugin {
             name: old_name,
             root: plugin_root,
         },
-        target_name: new_name,
+        new_name,
     } = context;
 
     let descriptor = plugin_root.join(old_name).with_extension("uplugin");

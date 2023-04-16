@@ -1,7 +1,7 @@
-mod rename_module;
-mod rename_plugin;
-mod rename_project;
-mod rename_target;
+pub mod rename_module;
+pub mod rename_plugin;
+pub mod rename_project;
+pub mod rename_target;
 mod workflow;
 
 pub use rename_module::*;
