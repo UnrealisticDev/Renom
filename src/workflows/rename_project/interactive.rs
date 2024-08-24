@@ -16,11 +16,22 @@ pub fn get_params_from_user() -> Result<Params, String> {
 
 fn get_project_root_from_user() -> Result<PathBuf, String> {
     Text::new("Project root directory path:")
+        .with_validator(validate_project_root_is_not_special)
         .with_validator(validate_project_root_is_dir)
         .with_validator(validate_project_root_contains_project_descriptor)
         .prompt()
         .map(|project_root| PathBuf::from(project_root))
         .map_err(|err| err.to_string())
+}
+
+fn validate_project_root_is_not_special(project_root: &str) -> Result<Validation, CustomUserError> {
+    match project_root {
+        "." => Ok(Validation::Invalid("Provided path '.' is protected".into())),
+        ".." => Ok(Validation::Invalid(
+            "Provided path '..' is protected".into(),
+        )),
+        _ => Ok(Validation::Valid),
+    }
 }
 
 fn validate_project_root_is_dir(project_root: &str) -> Result<Validation, CustomUserError> {

@@ -57,6 +57,7 @@ pub fn rename_project(params: Params) -> Result<(), String> {
 }
 
 fn validate_params(params: &Params) -> Result<(), String> {
+    validate_project_root_is_not_special(&params.project_root)?;
     validate_project_root_is_dir(&params.project_root)?;
     validate_project_root_contains_project_descriptor(&params.project_root)?;
     let project_name = detect_project_name(&params.project_root)?;
@@ -65,6 +66,14 @@ fn validate_params(params: &Params) -> Result<(), String> {
     validate_new_name_is_concise(&params.new_name)?;
     validate_new_name_is_valid_identifier(&params.new_name)?;
     Ok(())
+}
+
+fn validate_project_root_is_not_special(project_root: &Path) -> Result<(), String> {
+    match project_root {
+        path if path == Path::new(".") => Err("project root cannot be '.'".into()),
+        path if path == Path::new("..") => Err("project root cannot be '..'".into()),
+        _ => Ok(()),
+    }
 }
 
 fn validate_project_root_is_dir(project_root: &Path) -> Result<(), String> {
