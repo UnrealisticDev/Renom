@@ -8,8 +8,11 @@ use renom::{
     wizard::start_interactive_dialogue,
     workflows::{rename_module, rename_plugin, rename_project, rename_target},
 };
+mod crash;
 
 fn main() {
+    crash::init_crash_reporter();
+
     let cli = Cli::parse();
     match cli.command {
         None => { /* noop, clap will handle top-level help and version */ }
