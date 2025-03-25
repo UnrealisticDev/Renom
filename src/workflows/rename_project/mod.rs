@@ -59,6 +59,7 @@ pub fn rename_project(params: Params) -> Result<(), String> {
 fn validate_params(params: &Params) -> Result<(), String> {
     validate_project_root_is_not_special(&params.project_root)?;
     validate_project_root_is_dir(&params.project_root)?;
+    validate_project_root_is_not_current_dir(&params.project_root)?;
     validate_project_root_contains_project_descriptor(&params.project_root)?;
     let project_name = detect_project_name(&params.project_root)?;
     validate_new_name_is_not_empty(&params.new_name)?;
@@ -81,6 +82,18 @@ fn validate_project_root_is_dir(project_root: &Path) -> Result<(), String> {
         true => Ok(()),
         false => Err("project root must be a directory".into()),
     }
+}
+
+fn validate_project_root_is_not_current_dir(project_root: &Path) -> Result<(), String> {
+    let current_dir = std::env::current_dir().map_err(|err| err.to_string())?;
+    let abs_current_dir = fs::canonicalize(current_dir).map_err(|err| err.to_string())?;
+    let abs_project_root = fs::canonicalize(project_root).map_err(|err| err.to_string())?;
+
+    if abs_project_root == abs_current_dir {
+        return Err("project root cannot be current directory".into());
+    }
+
+    Ok(())
 }
 
 fn validate_project_root_contains_project_descriptor(project_root: &Path) -> Result<(), String> {

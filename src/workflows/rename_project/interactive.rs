@@ -4,6 +4,7 @@ use inquire::{validator::Validation, CustomUserError, Text};
 use regex::Regex;
 
 use super::Params;
+use indoc::indoc;
 
 pub fn get_params_from_user() -> Result<Params, String> {
     let project_root = get_project_root_from_user()?;
@@ -18,6 +19,7 @@ fn get_project_root_from_user() -> Result<PathBuf, String> {
     Text::new("Project root directory path:")
         .with_validator(validate_project_root_is_not_special)
         .with_validator(validate_project_root_is_dir)
+        .with_validator(validate_project_root_is_not_current_dir)
         .with_validator(validate_project_root_contains_project_descriptor)
         .prompt()
         .map(|project_root| PathBuf::from(project_root))
@@ -42,6 +44,26 @@ fn validate_project_root_is_dir(project_root: &str) -> Result<Validation, Custom
             Ok(Validation::Invalid(error_message.into()))
         }
     }
+}
+
+fn validate_project_root_is_not_current_dir(
+    project_root: &str,
+) -> Result<Validation, CustomUserError> {
+    let project_root = PathBuf::from(project_root);
+    let current_dir = std::env::current_dir().map_err(|err| err.to_string())?;
+    let abs_current_dir = fs::canonicalize(current_dir).map_err(|err| err.to_string())?;
+    let abs_project_root = fs::canonicalize(project_root).map_err(|err| err.to_string())?;
+
+    if abs_project_root == abs_current_dir {
+        let error_message = indoc! {"
+            Provided directory is the current directory which is protected
+              Move to the parent directory and try again\
+        "};
+
+        return Ok(Validation::Invalid(error_message.into()));
+    }
+
+    Ok(Validation::Valid)
 }
 
 fn validate_project_root_contains_project_descriptor(
